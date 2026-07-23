@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+api/rise365-99977-firebase-adminsdk-fbsvc-d99a135ee2.json
+api/*.json
+# Backend secrets
+api/.env
+api/*.json
+api/__pycache__/
+api/.venv/

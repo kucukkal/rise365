@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: rise365_postgres
+    environment:
+      POSTGRES_USER: rise365
+      POSTGRES_PASSWORD: rise365pass
+      POSTGRES_DB: rise365db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: rise365_redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:
