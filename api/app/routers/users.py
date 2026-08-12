@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -7,15 +7,47 @@ from app.core.dependencies import get_current_user
 router = APIRouter()
 
 @router.get("/me")
-def get_profile(current_user: User = Depends(get_current_user)):
+def get_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from app.models.program_level import ProgramLevel
+    level_name = None
+    if current_user.program_level_id:
+        try:
+            import uuid as _uuid
+            lv = db.query(ProgramLevel).filter(
+                ProgramLevel.id == _uuid.UUID(str(current_user.program_level_id))
+            ).first()
+            if lv:
+                level_name = lv.name
+        except:
+            level_name = str(current_user.program_level_id)
+
+    # Calculate live weighted completion % and current period points
+    try:
+        from app.services.completion_service import (
+            calculate_weighted_completion, calculate_total_points
+        )
+        live_pct = calculate_weighted_completion(current_user, db)
+        live_points = calculate_total_points(current_user, db)
+        print(f"✅ {current_user.name}: {live_pct}% | {live_points} pts")
+    except Exception as e:
+        print(f"❌ Completion calc error: {e}")
+        import traceback
+        traceback.print_exc()
+        live_pct = current_user.completion_rate
+        live_points = current_user.total_points
+
     return {
         "id": str(current_user.id),
         "name": current_user.name,
         "phone": current_user.phone,
         "program_level_id": current_user.program_level_id,
+        "program_level": level_name or "Level 1",
         "achievement_level": current_user.achievement_level,
-        "total_points": current_user.total_points,
-        "completion_rate": current_user.completion_rate,
+        "total_points": live_points,
+        "completion_rate": live_pct,
     }
 
 @router.put("/fcm-token")

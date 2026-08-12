@@ -26,6 +26,7 @@ class Task(Base):
     points = Column(Integer, default=10)
     info_type = Column(Enum(TaskInfoType), default=TaskInfoType.none)
     info_content = Column(Text, nullable=True)
+    pool_type = Column(String(20), default="myseed", nullable=False, server_default="myseed")
     program_level_id = Column(UUID(as_uuid=True), ForeignKey("program_levels.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

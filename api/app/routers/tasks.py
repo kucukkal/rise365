@@ -12,21 +12,35 @@ import uuid
 
 router = APIRouter()
 
-def get_period_range(frequency: str):
+def get_period_range(frequency: str, use_4am: bool = True):
     now = datetime.utcnow()
+    cutoff_hour = 4 if use_4am else 0
+
     if frequency == "daily":
-        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        start = now.replace(hour=cutoff_hour, minute=0, second=0, microsecond=0)
+        if now.hour < cutoff_hour:
+            start = start - timedelta(days=1)
         end = start + timedelta(days=1)
+
     elif frequency == "weekly":
-        start = now - timedelta(days=now.weekday())
-        start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Find last Monday at 4 AM
+        today_4am = now.replace(hour=cutoff_hour, minute=0, second=0, microsecond=0)
+        if now.hour < cutoff_hour:
+            today_4am = today_4am - timedelta(days=1)
+        days_since_monday = today_4am.weekday()
+        start = today_4am - timedelta(days=days_since_monday)
         end = start + timedelta(weeks=1)
+
     else:  # monthly
-        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        if now.month == 12:
-            end = start.replace(year=now.year + 1, month=1)
+        today_4am = now.replace(hour=cutoff_hour, minute=0, second=0, microsecond=0)
+        if now.hour < cutoff_hour:
+            today_4am = today_4am - timedelta(days=1)
+        start = today_4am.replace(day=1)
+        if today_4am.month == 12:
+            end = start.replace(year=today_4am.year + 1, month=1)
         else:
-            end = start.replace(month=now.month + 1)
+            end = start.replace(month=today_4am.month + 1)
+
     return start, end
 
 @router.get("/", response_model=List[TaskResponse])
@@ -40,10 +54,29 @@ def get_tasks(
     if frequency:
         query = query.filter(Task.frequency == frequency)
 
+    # Filter by pool_type based on user's level type
+    from app.models.program_level import ProgramLevel
+    import uuid as uuid_mod
+    user_level_type = "seed"  # default
     if current_user.program_level_id:
+        try:
+            level = db.query(ProgramLevel).filter(
+                ProgramLevel.id == uuid_mod.UUID(str(current_user.program_level_id))
+            ).first()
+            user_level_type = getattr(level, "level_type", "seed") if level else "seed"
+        except:
+            pass
+
+    # MySeed users see myseed + both tasks
+    # MyRise users see myrise + both tasks
+    if user_level_type == "myrise":
         query = query.filter(
-            (Task.program_level_id == current_user.program_level_id) |
-            (Task.program_level_id == None)
+            Task.pool_type.in_(["myrise", "both"])
+        )
+    else:
+        # seed or custom — see myseed + both
+        query = query.filter(
+            Task.pool_type.in_(["myseed", "both"])
         )
 
     tasks = query.all()
@@ -51,7 +84,7 @@ def get_tasks(
 
     for task in tasks:
         freq = task.frequency.value if hasattr(task.frequency, 'value') else task.frequency
-        start, end = get_period_range(freq)
+        start, end = get_period_range(freq, use_4am=True)
 
         completion = db.query(TaskCompletion).filter(
             and_(
@@ -62,17 +95,18 @@ def get_tasks(
             )
         ).first()
 
-        result.append(TaskResponse(
-            id=str(task.id),
-            title=task.title,
-            description=task.description,
-            frequency=task.frequency,
-            points=task.points,
-            info_type=task.info_type,
-            info_content=task.info_content,
-            is_completed=completion is not None,
-            completed_at=completion.completed_at if completion else None
-        ))
+        result.append({
+            "id": str(task.id),
+            "title": task.title,
+            "description": task.description,
+            "frequency": task.frequency.value if hasattr(task.frequency, "value") else task.frequency,
+            "points": task.points,
+            "info_type": task.info_type.value if hasattr(task.info_type, "value") else task.info_type,
+            "info_content": task.info_content,
+            "pool_type": getattr(task, "pool_type", "myseed") or "myseed",
+            "is_completed": completion is not None,
+            "completed_at": str(completion.completed_at) if completion else None,
+        })
 
     return result
 
@@ -119,10 +153,34 @@ def complete_task(
     return {"message": "Task completed", "points_earned": task.points, "total_points": current_user.total_points}
 
 def _update_completion_rate(user: User, db: Session):
-    total_tasks = db.query(Task).filter(Task.is_active == True).count()
+    # Get user level type to filter correct pool
+    from app.models.program_level import ProgramLevel
+    import uuid as _uuid
+    user_level_type = "seed"
+    if user.program_level_id:
+        try:
+            lv = db.query(ProgramLevel).filter(
+                ProgramLevel.id == _uuid.UUID(str(user.program_level_id))
+            ).first()
+            user_level_type = getattr(lv, "level_type", "seed") if lv else "seed"
+        except:
+            pass
+
+    # Count only tasks relevant to this user
+    if user_level_type == "myrise":
+        pool_filter = Task.pool_type.in_(["myrise", "both"])
+    else:
+        pool_filter = Task.pool_type.in_(["myseed", "both"])
+
+    total_tasks = db.query(Task).filter(
+        Task.is_active == True,
+        pool_filter
+    ).count()
+
     if total_tasks == 0:
         user.completion_rate = 0.0
         return
+
     now = datetime.utcnow()
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     completed = db.query(TaskCompletion).filter(
@@ -146,6 +204,7 @@ def create_task(
         points=request.points,
         info_type=request.info_type,
         info_content=request.info_content,
+        pool_type=request.pool_type or "myseed",
         program_level_id=uuid.UUID(request.program_level_id) if request.program_level_id else None
     )
     db.add(task)

@@ -13,4 +13,5 @@ class ProgramLevel(Base):
     description = Column(Text, nullable=True)
     order = Column(Integer, default=0)
     is_active = Column(Boolean, default=True)
+    level_type = Column(String(20), default="custom")  # seed, myrise, custom
     created_at = Column(DateTime(timezone=True), server_default=func.now())

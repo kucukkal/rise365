@@ -22,6 +22,10 @@ class Settings(BaseSettings):
 
     # App
     APP_NAME: str = "Rise365"
+    ADMIN_EMAIL: str = "kucukkalmu@gmail.com"
+    SENDGRID_API_KEY: str = ""
+    ADMIN_USERNAME: str = "admin"
+    ADMIN_PASSWORD: str = "Rise365Admin!"
     DEBUG: bool = True
 
     class Config:

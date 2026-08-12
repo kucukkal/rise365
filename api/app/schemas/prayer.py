@@ -1,28 +1,27 @@
 from pydantic import BaseModel
 from typing import Optional, List
-from enum import Enum
 from datetime import datetime
 
-class PrayerName(str, Enum):
-    fajr = "fajr"
-    dhuhr = "dhuhr"
-    asr = "asr"
-    maghrib = "maghrib"
-    isha = "isha"
+class PrayerCompleteRequest(BaseModel):
+    prayer_name: str
 
 class PrayerTimeResponse(BaseModel):
-    name: PrayerName
+    name: str
+    display_name: str
     arabic_name: str
     time: str
     points: int
     is_completed: bool = False
-
-class PrayerCompleteRequest(BaseModel):
-    prayer_name: PrayerName
+    is_locked: bool = False
+    window_expired: bool = False
+    minutes_left: Optional[int] = None
 
 class DailyPrayersResponse(BaseModel):
     date: str
     location: str
+    level_order: int
+    evrad_required: bool
+    evrad_completed: bool
     prayers: List[PrayerTimeResponse]
     total_completed: int
     total_points_earned: int

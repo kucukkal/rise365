@@ -22,7 +22,10 @@ dependencies = [
     "firebase-admin (>=7.5.0,<8.0.0)",
     "twilio (>=9.10.9,<10.0.0)",
     "httpx (>=0.28.1,<0.29.0)",
-    "python-multipart (>=0.0.32,<0.0.33)"
+    "python-multipart (>=0.0.32,<0.0.33)",
+    "pymupdf (>=1.28.0,<2.0.0)",
+    "sendgrid (>=6.12.5,<7.0.0)",
+    "openpyxl (>=3.1.5,<4.0.0)"
 ]
 
 

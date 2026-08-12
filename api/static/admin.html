@@ -1,0 +1,1771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rise365 Admin Portal</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --primary:#1D9E75;--primary-dk:#0F6E56;--primary-lt:#E1F5EE;
+  --accent:#BA7517;--accent-lt:#FAEEDA;
+  --bg:#F8F9FA;--surface:#FFFFFF;--border:#E8E8E8;
+  --text:#1A1A1A;--text2:#6B6B6B;--text3:#AAAAAA;
+  --error:#E24B4A;--error-bg:#FEE2E2;--error-dk:#991B1B;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+input,select,textarea,button{font-family:inherit;font-size:14px}
+input,select,textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);border-width:1.5px}
+textarea{resize:vertical}
+.btn{padding:9px 18px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:opacity .15s}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--primary-dk)}
+.btn-danger{background:var(--error-bg);color:var(--error-dk);border:1px solid #FCA5A5}
+.btn-danger:hover:not(:disabled){background:#FEE2E2}
+.btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{background:var(--bg)}
+label{font-size:12px;font-weight:500;color:var(--text2);display:block;margin-bottom:5px}
+/* Layout */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:240px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sb-head{padding:18px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.logo-box{width:38px;height:38px;background:var(--primary);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-box i{color:#fff;font-size:20px}
+.app-name{font-size:14px;font-weight:600;color:var(--text)}
+.app-sub{font-size:11px;color:var(--text2)}
+nav{padding:14px 12px;flex:1;overflow-y:auto}
+.step-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.06em;padding:0 4px;margin-bottom:8px}
+.step-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;margin-bottom:4px;border:none;background:transparent;width:100%;text-align:left;color:var(--text2);transition:background .1s}
+.step-item:hover{background:var(--bg)}
+.step-item.active{background:var(--primary-lt);color:var(--primary-dk)}
+.step-item .step-circle{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0;background:var(--surface);color:var(--text3);transition:all .2s}
+.step-item.active .step-circle{background:var(--primary);border-color:var(--primary);color:#fff}
+.step-item.done .step-circle{background:var(--primary-lt);border-color:var(--primary);color:var(--primary)}
+.step-item .step-name{font-size:13px;font-weight:500}
+.step-item.active .step-name{color:var(--primary-dk);font-weight:600}
+.step-connector{width:1.5px;height:14px;background:var(--border);margin:2px 0 2px 21px}
+.sb-foot{padding:12px;border-top:1px solid var(--border)}
+/* Main */
+.main{flex:1;overflow-y:auto;padding:28px 32px;background:var(--bg)}
+.section{display:none}
+.section.active{display:block}
+.sec-head{margin-bottom:22px;display:flex;align-items:flex-start;justify-content:space-between}
+.sec-head-left h2{font-size:20px;font-weight:700;color:var(--text);margin-bottom:3px}
+.sec-head-left p{font-size:13px;color:var(--text2)}
+.step-badge{display:inline-flex;align-items:center;gap:6px;background:var(--primary-lt);color:var(--primary-dk);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.card h3{font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}
+.form-group{margin-bottom:14px}
+/* List */
+.list-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--surface)}
+.list-header{padding:11px 18px;border-bottom:1px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:space-between}
+.list-header span{font-size:13px;font-weight:600;color:var(--text)}
+.list-row{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.list-row:last-child{border-bottom:none}
+.row-title{font-size:14px;font-weight:500;color:var(--text)}
+.row-sub{font-size:12px;color:var(--text2);margin-top:2px}
+.tags{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex-shrink:0}
+.badge{font-size:11px;font-weight:500;padding:2px 9px;border-radius:10px;white-space:nowrap}
+.badge-green{background:var(--primary-lt);color:var(--primary-dk)}
+.badge-amber{background:var(--accent-lt);color:var(--accent)}
+.badge-gray{background:var(--bg);color:var(--text2);border:1px solid var(--border)}
+.badge-blue{background:#E6F1FB;color:#0C447C}
+.badge-red{background:var(--error-bg);color:var(--error-dk)}
+/* Alert */
+.alert{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.alert i{font-size:16px;flex-shrink:0}
+.alert-success{background:var(--primary-lt);color:var(--primary-dk)}
+.alert-error{background:var(--error-bg);color:var(--error-dk)}
+/* Avatar */
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--primary-lt);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--primary-dk);flex-shrink:0}
+.empty{text-align:center;padding:40px 20px;color:var(--text3)}
+.empty i{font-size:36px;display:block;margin-bottom:10px;color:var(--text3)}
+.empty p{font-size:13px}
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.login-card{background:var(--surface);border-radius:16px;padding:40px;width:420px;border:1px solid var(--border)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo-box{width:64px;height:64px;background:var(--primary);border-radius:18px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px}
+.login-logo-box i{color:#fff;font-size:30px}
+.login-title{font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px}
+.login-sub{font-size:14px;color:var(--text2)}
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--surface);border-radius:14px;padding:24px;width:380px;border:1px solid var(--border)}
+.modal h3{font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px}
+.modal p{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.5}
+.modal-btns{display:flex;gap:10px;justify-content:flex-end}
+</style>
+</head>
+<body>
+
+<!-- CONFIRM MODAL -->
+<div id="confirm-modal" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h3 id="modal-title">Confirm action</h3>
+    <p id="modal-body">Are you sure?</p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="modal-confirm-btn" onclick="confirmAction()">Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div id="login-view" class="login-wrap">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-box"><i class="ti ti-sun"></i></div>
+      <div class="login-title">Rise365</div>
+      <div class="login-sub">Admin Portal</div>
+    </div>
+    <div id="login-alert" class="alert" style="display:none"></div>
+
+    <!-- Step 1: Username + Password -->
+    <div id="step-credentials">
+      <div class="form-group">
+        <label>Username</label>
+        <input id="admin-username" type="text" placeholder="admin" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input id="admin-password" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" id="login-btn" onclick="handleCredentials()"
+              style="width:100%;justify-content:center;padding:12px;font-size:14px">
+        <i class="ti ti-lock"></i><span id="login-btn-text">Verify credentials</span>
+      </button>
+    </div>
+
+    <!-- Step 2: OTP -->
+    <div id="step-otp" style="display:none">
+      <div style="text-align:center;margin-bottom:20px;padding:12px;background:var(--primary-lt);border-radius:10px">
+        <i class="ti ti-mail" style="color:var(--primary);font-size:24px;display:block;margin-bottom:6px"></i>
+        <div style="font-size:13px;color:var(--primary-dk);font-weight:500">OTP sent to admin email</div>
+        <div style="font-size:12px;color:var(--primary-dk,#085041);margin-top:2px" id="otp-phone-hint"></div>
+      </div>
+      <div class="form-group">
+        <label>OTP code <span style="color:var(--text3);font-weight:400">(123456 in dev)</span></label>
+        <input id="login-otp" type="text" maxlength="6" placeholder="123456"
+               style="letter-spacing:8px;text-align:center;font-size:22px">
+      </div>
+      <button class="btn btn-primary" id="otp-btn" onclick="handleOtp()"
+              style="width:100%;justify-content:center;padding:12px;font-size:14px">
+        <i class="ti ti-check"></i>Verify OTP
+      </button>
+      <button class="btn btn-ghost" onclick="backToCredentials()"
+              style="width:100%;justify-content:center;margin-top:8px">
+        <i class="ti ti-arrow-left"></i>Back
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN APP -->
+<div id="app-view" class="app" style="display:none">
+  <div class="sidebar">
+    <div class="sb-head">
+      <div class="logo-box"><i class="ti ti-sun"></i></div>
+      <div>
+        <div class="app-name">Rise365</div>
+        <div class="app-sub">Admin Portal</div>
+      </div>
+    </div>
+
+    <nav>
+      <div class="step-label">SETUP STEPS</div>
+
+      <button class="step-item active" id="nav-codes" onclick="showSection('codes',this)">
+        <div class="step-circle" id="sc-codes">1</div>
+        <div>
+          <div class="step-name">Signup codes</div>
+        </div>
+      </button>
+      <div class="step-connector"></div>
+
+      <button class="step-item" id="nav-levels" onclick="showSection('levels',this)">
+        <div class="step-circle" id="sc-levels">2</div>
+        <div>
+          <div class="step-name">Program levels</div>
+        </div>
+      </button>
+      <div class="step-connector"></div>
+
+      <button class="step-item" id="nav-tasks" onclick="showSection('tasks',this)">
+        <div class="step-circle" id="sc-tasks">3</div>
+        <div>
+          <div class="step-name">Tasks</div>
+        </div>
+      </button>
+      <div class="step-connector"></div>
+
+      <button class="step-item" id="nav-pdftasks" onclick="showSection('pdftasks',this)">
+        <div class="step-circle" id="sc-pdftasks">4</div>
+        <div>
+          <div class="step-name">Content tasks</div>
+        </div>
+      </button>
+      <div class="step-connector"></div>
+
+      <button class="step-item" id="nav-users" onclick="showSection('users',this)">
+        <div class="step-circle" id="sc-users">5</div>
+        <div>
+          <div class="step-name">Users</div>
+        </div>
+      </button>
+      <div class="step-connector"></div>
+      <button class="step-item" id="nav-settings" onclick="showSection('settings',this)">
+        <div class="step-circle" id="sc-settings"><i class="ti ti-settings" style="font-size:12px"></i></div>
+        <div>
+          <div class="step-name">App Settings</div>
+        </div>
+      </button>
+      <div class="step-connector"></div>
+      <button class="step-item" id="nav-quotes" onclick="showSection('quotes',this)">
+        <div class="step-circle" id="sc-quotes"><i class="ti ti-quote" style="font-size:12px"></i></div>
+        <div>
+          <div class="step-name">Quotes</div>
+        </div>
+      </button>
+    </nav>
+
+    <div class="sb-foot">
+      <button class="btn btn-ghost" onclick="logout()"
+              style="width:100%;justify-content:center">
+        <i class="ti ti-logout"></i>Logout
+      </button>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- ── STEP 1: SIGNUP CODES ─────────────────────────────────── -->
+    <div id="sec-codes" class="section active">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <h2>Signup codes</h2>
+          <p>Create invite codes so users can register in Rise365</p>
+        </div>
+        <span class="step-badge"><i class="ti ti-ticket"></i>Step 1 of 4</span>
+      </div>
+      <div id="codes-alert" class="alert" style="display:none"></div>
+
+      <div class="card">
+        <h3><i class="ti ti-plus" style="color:var(--primary)"></i>Create new code</h3>
+        <div class="grid2">
+          <div>
+            <label>Code</label>
+            <input id="new-code" placeholder="e.g. RISE2025"
+                   style="font-family:monospace;text-transform:uppercase"
+                   oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div>
+            <label>Max uses</label>
+            <input id="new-uses" type="number" value="100" min="1">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="create-code-btn" onclick="createSignupCode()">
+          <i class="ti ti-plus"></i>Create code
+        </button>
+        <button class="btn btn-ghost" onclick="showSection('levels',document.getElementById('nav-levels'))"
+                style="margin-left:10px">
+          Next: Program levels <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>
+
+      <div class="list-wrap">
+        <div class="list-header">
+          <span id="codes-count">Existing codes</span>
+        </div>
+        <div id="codes-list">
+          <div class="empty"><i class="ti ti-ticket"></i><p>No codes yet — create your first code above</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 2: PROGRAM LEVELS ───────────────────────────────── -->
+    <div id="sec-levels" class="section">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <h2>Program levels</h2>
+          <p>Create levels that group users and their assigned tasks</p>
+        </div>
+        <span class="step-badge"><i class="ti ti-layers"></i>Step 2 of 4</span>
+      </div>
+      <div id="levels-alert" class="alert" style="display:none"></div>
+
+      <div class="card">
+        <h3><i class="ti ti-plus" style="color:var(--primary)"></i>Create new level</h3>
+        <div class="grid2">
+          <div>
+            <label>Level name *</label>
+            <input id="level-name" placeholder="e.g. Foundations">
+          </div>
+          <div>
+            <label>Order (for sorting)</label>
+            <input id="level-order" type="number" value="0" min="0">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <input id="level-desc" placeholder="Brief description of this level...">
+        </div>
+        <button class="btn btn-primary" id="create-level-btn" onclick="createLevel()">
+          <i class="ti ti-plus"></i>Create level
+        </button>
+        <button class="btn btn-ghost" onclick="showSection('tasks',document.getElementById('nav-tasks'))"
+                style="margin-left:10px">
+          Next: Tasks <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>
+
+      <div class="list-wrap">
+        <div class="list-header">
+          <span id="levels-count">Program levels</span>
+        </div>
+        <div id="levels-list">
+          <div class="empty"><i class="ti ti-layers"></i><p>No levels yet — create your first level above</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 3: TASKS ────────────────────────────────────────── -->
+    <div id="sec-tasks" class="section">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <h2>Tasks</h2>
+          <p>Create tasks and assign them to specific program levels</p>
+        </div>
+        <span class="step-badge"><i class="ti ti-checkbox"></i>Step 3 of 4</span>
+      </div>
+      <div id="tasks-alert" class="alert" style="display:none"></div>
+
+      <div class="card">
+        <h3><i class="ti ti-plus" style="color:var(--primary)"></i>Create new task</h3>
+        <div class="form-group">
+          <label>Task title *</label>
+          <input id="task-title" placeholder="e.g. Read Quran (10 min)">
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="task-desc" rows="2" placeholder="Instructions or details for this task..."></textarea>
+        </div>
+        <div class="grid3">
+          <div>
+            <label>Frequency</label>
+            <select id="task-freq">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div>
+            <label>Points</label>
+            <input id="task-pts" type="number" value="10" min="1">
+          </div>
+          <div>
+            <label>Task pool</label>
+            <select id="task-pool">
+              <option value="myseed">🌱 MySeed only</option>
+              <option value="myrise">🌿 MyRise only</option>
+              <option value="both">🌳 Both</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Task pool <span style="color:var(--text3);font-weight:400">— who can see this task?</span></label>
+          <div style="display:flex;gap:16px;margin-top:8px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-secondary);margin:0;font-weight:400">
+              <input type="radio" name="task-pool" value="myseed" checked>
+              🌱 MySeed only (fixed — admin controlled)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-secondary);margin:0;font-weight:400">
+              <input type="radio" name="task-pool" value="myrise">
+              🌿 MyRise only (user selectable)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;color:var(--text-secondary);margin:0;font-weight:400">
+              <input type="radio" name="task-pool" value="both">
+              🌳 Both pools
+            </label>
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label>Info type</label>
+            <select id="task-info-type" onchange="toggleInfoContent()">
+              <option value="none">None</option>
+              <option value="text">Text</option>
+              <option value="image">Image URL</option>
+              <option value="video">Video URL</option>
+            </select>
+          </div>
+        </div>
+        <div id="info-content-wrap" class="form-group" style="display:none">
+          <label id="info-content-label">Info content</label>
+          <textarea id="task-info-content" rows="3" placeholder="Enter content..."></textarea>
+        </div>
+        <div style="margin-top:6px">
+          <button class="btn btn-primary" id="create-task-btn" onclick="createTask()">
+            <i class="ti ti-plus"></i>Create task
+          </button>
+          <button class="btn btn-ghost"
+                  onclick="showSection('users',document.getElementById('nav-users'))"
+                  style="margin-left:10px">
+            Next: Users <i class="ti ti-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter by level -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <label style="margin:0;white-space:nowrap">Filter by level:</label>
+        <select id="tasks-filter" onchange="filterTasks()" style="max-width:200px">
+          <option value="">All levels</option>
+        </select>
+        <button class="btn btn-ghost" onclick="loadTasks()" style="padding:7px 12px">
+          <i class="ti ti-refresh"></i>
+        </button>
+      </div>
+
+      <div class="list-wrap">
+        <div class="list-header">
+          <span id="tasks-count">All tasks</span>
+        </div>
+        <div id="tasks-list">
+          <div class="empty"><i class="ti ti-checkbox"></i><p>No tasks yet</p></div>
+        </div>
+      </div>
+    </div>
+
+        <!-- ── STEP 4: CONTENT TASKS ─────────────────────────────── -->
+    <div id="sec-pdftasks" class="section">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <h2>Content tasks</h2>
+          <p>Create tasks with optional content — PDF or Excel attachment auto-detected</p>
+        </div>
+        <span class="step-badge"><i class="ti ti-file-text"></i>Step 4 of 5</span>
+      </div>
+      <div id="pdftasks-alert" class="alert" style="display:none"></div>
+
+      <div class="card">
+        <h3><i class="ti ti-plus" style="color:var(--primary)"></i>Create task</h3>
+
+        <div class="grid3">
+          <div>
+            <label>Task name *</label>
+            <input id="pdf-task-name" placeholder="e.g. Read Quran">
+          </div>
+          <div>
+            <label>Frequency</label>
+            <select id="pdf-task-freq">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div>
+            <label>Points</label>
+            <input id="pdf-task-points" type="number" value="10" min="1">
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-bottom:14px">
+          <div>
+            <label>Task pool</label>
+            <select id="pdf-task-pool">
+              <option value="myseed">🌱 MySeed only</option>
+              <option value="myrise">🌿 MyRise only</option>
+              <option value="both">🌳 Both</option>
+            </select>
+          </div>
+          <div>
+            <label>Assign to level (optional)</label>
+            <select id="pdf-task-level">
+              <option value="">All levels</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- File attachment -->
+        <div style="margin-bottom:14px">
+          <label>Content file <span style="color:var(--text3);font-weight:400">— optional. Upload PDF or Excel</span></label>
+          <div style="margin-top:8px;padding:16px;border:1.5px dashed var(--border);border-radius:10px;background:var(--bg)">
+            <input type="file" id="content-file-input" accept=".pdf,.xlsx,.xls"
+              style="width:100%;font-size:13px;color:var(--text-primary)">
+            <div id="file-type-hint" style="margin-top:8px;font-size:12px;color:var(--text3)">
+              Accepted: .pdf (rotating pages) or .xlsx (rotating rows with content + information columns)
+            </div>
+            <div id="file-detected" style="display:none;margin-top:8px"></div>
+          </div>
+        </div>
+
+        <!-- PDF level assignments (shown only for PDF files) -->
+        <div id="pdf-level-assignments" style="display:none;margin-bottom:14px">
+          <label>Pages per level <span style="color:var(--text3);font-weight:400">— how many pages per day per level</span></label>
+          <div id="pdf-level-rows" style="margin-top:8px"></div>
+          <button class="btn btn-ghost" onclick="addPdfLevelRow()"
+                  style="margin-top:8px;padding:6px 14px;font-size:12px">
+            <i class="ti ti-plus"></i>Add level
+          </button>
+        </div>
+
+        <button class="btn btn-primary" id="create-content-task-btn"
+                onclick="createContentTask()">
+          <i class="ti ti-plus"></i>Create task
+        </button>
+      </div>
+
+      <!-- Task list -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <button class="btn btn-ghost" onclick="loadContentTasks()" style="padding:7px 12px">
+          <i class="ti ti-refresh"></i>
+        </button>
+      </div>
+      <div class="list-wrap">
+        <div class="list-header">
+          <span id="pdftasks-count">All tasks</span>
+        </div>
+        <div id="pdftasks-list">
+          <div class="empty"><i class="ti ti-file-text"></i><p>No tasks yet</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── STEP 5: USERS<!-- ── STEP 5: USERS ────────────────────────────────────────── -->
+    <div id="sec-users" class="section">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <h2>Users</h2>
+          <p>All registered Rise365 members</p>
+        </div>
+        <span class="step-badge"><i class="ti ti-users"></i>Step 5 of 5</span>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-ghost" onclick="loadUsers()" style="padding:7px 12px">
+          <i class="ti ti-refresh"></i>Refresh
+        </button>
+      </div>
+
+      <div class="list-wrap">
+        <div class="list-header">
+          <span id="users-count">Users</span>
+        </div>
+        <div id="users-list">
+          <div class="empty"><i class="ti ti-users"></i><p>Loading users...</p></div>
+        </div>
+      </div>
+    </div>
+
+  <!-- ── APP SETTINGS ─────────────────────────────────────── -->
+    <div id="sec-settings" class="section">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <h2>App Settings</h2>
+          <p>Edit motivational phrases and app-wide settings</p>
+        </div>
+        <span class="step-badge"><i class="ti ti-settings"></i>Settings</span>
+      </div>
+      <div id="settings-alert" class="alert" style="display:none"></div>
+
+      <!-- Signup Info -->
+      <div class="card">
+        <h3><i class="ti ti-door-enter" style="color:var(--primary)"></i>Signup screen descriptions</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+          These texts appear on the login screen to help users choose their path.
+        </p>
+
+        <div class="form-group">
+          <label>Welcome message</label>
+          <textarea id="setting-welcome" rows="3"
+            placeholder="Welcome to Rise 365! How would you like to begin your journey?..."
+            style="font-size:13px"></textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div>
+            <div class="form-group">
+              <label>🌱 MySeed title</label>
+              <input id="setting-myseed-title" placeholder="🌱 MySeed Path">
+            </div>
+            <div class="form-group">
+              <label>🌱 MySeed description</label>
+              <textarea id="setting-myseed-desc" rows="4"
+                placeholder="Start gently with a simple, sustainable routine..."
+                style="font-size:13px"></textarea>
+            </div>
+          </div>
+          <div>
+            <div class="form-group">
+              <label>🌿 MyBuild title</label>
+              <input id="setting-myrise-title" placeholder="🌿 MyBuild Path">
+            </div>
+            <div class="form-group">
+              <label>🌿 MyBuild description</label>
+              <textarea id="setting-myrise-desc" rows="4"
+                placeholder="Create a routine that matches your goals..."
+                style="font-size:13px"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSignupInfo()">
+          <i class="ti ti-device-floppy"></i>Save signup info
+        </button>
+      </div>
+
+      <!-- Taraweeh -->
+      <div class="card">
+        <h3><i class="ti ti-moon" style="color:var(--primary)"></i>Taraweeh Motivational Phrases</h3>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+          These phrases appear before Ramadan to motivate users based on last year's Taraweeh attendance.
+          Use <code style="background:var(--bg);padding:2px 6px;border-radius:4px">{count}</code> to insert last year's count.
+        </p>
+
+        <div class="form-group">
+          <label>Returning users phrase (shown if they attended Taraweeh last year)</label>
+          <textarea id="setting-taraweeh-returning" rows="3"
+            placeholder="Last year you completed {count} Taraweeh nights — let's do better this Ramadan! 🌙"
+            style="font-size:13px"></textarea>
+          <div style="font-size:12px;color:var(--error,#E24B4A);margin-top:6px;display:flex;align-items:center;gap:6px">
+            <i class="ti ti-alert-circle" style="font-size:14px"></i>
+            <strong>{count}</strong> is required — it will be replaced with the user's actual number. You can only change the words around it.
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:4px">
+            Example: "MashaAllah! Last year you prayed {count} Taraweeh nights — beat that this Ramadan! 🌙"
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>First-time users phrase (shown if no Taraweeh record from last year)</label>
+          <textarea id="setting-taraweeh-first" rows="3"
+            placeholder="This is your first Ramadan with Rise365 — aim for all 30 Taraweeh nights! 🌙"
+            style="font-size:13px"></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettings()">
+          <i class="ti ti-device-floppy"></i>Save Settings
+        </button>
+      </div>
+    </div>
+
+  <!-- ── QUOTES ──────────────────────────────────────────────── -->
+    <div id="sec-quotes" class="section">
+      <div class="sec-head">
+        <div class="sec-head-left">
+          <h2>Quotes</h2>
+          <p>Manage inspirational quotes shown on the splash screen</p>
+        </div>
+        <span class="step-badge"><i class="ti ti-quote"></i>Quotes</span>
+      </div>
+      <div id="quotes-alert" class="alert" style="display:none"></div>
+
+      <!-- Upload from file -->
+      <div class="card">
+        <h3><i class="ti ti-upload" style="color:var(--primary)"></i>Upload quotes from file</h3>
+        <div style="background:var(--bg);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;color:var(--text2)">
+          <div style="font-weight:500;color:var(--text-primary);margin-bottom:8px">📊 Excel format (.xlsx):</div>
+          <div>Column A: Quote text (required)</div>
+          <div>Column B: Source — e.g. "Quran 2:286", "Sahih Bukhari", "Ali ibn Abi Talib"</div>
+          <div>Column C: Category — quran / hadith / motivational / general</div>
+          <div style="margin-top:8px;font-weight:500;color:var(--text-primary)">📄 PDF format (.pdf):</div>
+          <div>Each line = one quote. Optional: "Quote text | Source | Category"</div>
+        </div>
+        <div class="form-group">
+          <label>Select file (.xlsx or .pdf)</label>
+          <input type="file" id="quotes-file" accept=".xlsx,.xls,.pdf"
+            style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface-2);font-size:13px">
+        </div>
+        <button class="btn btn-primary" onclick="uploadQuotes()">
+          <i class="ti ti-upload"></i>Upload quotes
+        </button>
+      </div>
+
+      <!-- Add single quote -->
+      <div class="card">
+        <h3><i class="ti ti-plus" style="color:var(--primary)"></i>Add single quote</h3>
+        <div class="form-group">
+          <label>Quote text *</label>
+          <textarea id="quote-text" rows="3"
+            placeholder="The best of people are those who are most beneficial to others."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Source (optional)</label>
+          <input id="quote-source" placeholder="e.g. Prophet Muhammad ﷺ, Quran 2:286, Ali ibn Abi Talib">
+        </div>
+        <button class="btn btn-primary" onclick="addQuote()">
+          <i class="ti ti-plus"></i>Add quote
+        </button>
+      </div>
+
+      <!-- Quotes list -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <span id="quotes-count" style="font-size:13px;font-weight:500;color:var(--text-primary)">All quotes</span>
+        <button class="btn btn-ghost" onclick="loadQuotes()" style="padding:7px 12px">
+          <i class="ti ti-refresh"></i>
+        </button>
+      </div>
+      <div class="list-wrap">
+        <div id="quotes-list">
+          <div class="empty"><i class="ti ti-quote"></i><p>No quotes yet — upload a file or add one above</p></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = 'http://127.0.0.1:8000/api/v1';
+let token = localStorage.getItem('rise365_admin_token');
+let otpSent = false;
+let adminPhone = '';
+
+// State
+let codesData = [];
+let levelsData = [];
+let tasksData = [];
+let usersData = [];
+let pendingAction = null;
+
+// Init
+if (token) showApp();
+
+// ── API ──────────────────────────────────────────────────────────────────────
+async function api(method, path, data, tok) {
+  const headers = { 'Content-Type': 'application/json' };
+  const t = tok || token;
+  if (t) headers['Authorization'] = 'Bearer ' + t;
+  const opts = { method, headers };
+  if (data) opts.body = JSON.stringify(data);
+  const res = await fetch(API + path, opts);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: 'Request failed' }));
+    throw new Error(err.detail || 'Error');
+  }
+  return res.json();
+}
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+async function handleLogin() {
+  const phone = document.getElementById('login-phone').value.trim();
+  const btn = document.getElementById('login-btn');
+  const btnText = document.getElementById('login-btn-text');
+  if (!phone) return;
+
+  if (!otpSent) {
+    btn.disabled = true; btnText.textContent = 'Sending...';
+    try {
+      await api('POST', '/auth/send-otp', { phone, signup_code: 'RISE2025' });
+      otpSent = true;
+      document.getElementById('otp-group').style.display = 'block';
+      document.getElementById('login-phone').disabled = true;
+      btnText.textContent = 'Verify & Login';
+      showLoginAlert('OTP sent! Use 123456 in dev mode.', false);
+    } catch(e) { showLoginAlert(e.message, true); }
+    btn.disabled = false;
+  } else {
+    const otp = document.getElementById('login-otp').value.trim();
+    if (otp.length < 6) return;
+    btn.disabled = true; btnText.textContent = 'Verifying...';
+    try {
+      await api('POST', '/auth/verify-otp', { phone, code: otp });
+      const data = await api('POST', '/auth/register',
+        { phone, name: 'Admin', program_level_id: 'admin' });
+      token = data.access_token;
+      localStorage.setItem('rise365_admin_token', token);
+      showApp();
+    } catch(e) { showLoginAlert(e.message, true); }
+    btn.disabled = false;
+  }
+}
+
+function showLoginAlert(msg, isError) {
+  const el = document.getElementById('login-alert');
+  el.innerHTML = `<i class="ti ti-${isError?'alert-circle':'check'}"></i>${msg}`;
+  el.className = 'alert ' + (isError ? 'alert-error' : 'alert-success');
+  el.style.display = 'flex';
+}
+
+function showApp() {
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('app-view').style.display = 'flex';
+  loadLevels();
+  loadTasks();
+  loadUsers();
+}
+
+function logout() {
+  localStorage.removeItem('rise365_admin_token');
+  token = null; otpSent = false;
+  codesData = []; levelsData = []; tasksData = []; usersData = [];
+  document.getElementById('login-view').style.display = 'flex';
+  document.getElementById('app-view').style.display = 'none';
+  document.getElementById('login-phone').disabled = false;
+  document.getElementById('login-phone').value = '';
+  document.getElementById('login-otp').value = '';
+  document.getElementById('otp-group').style.display = 'none';
+  document.getElementById('login-btn-text').textContent = 'Send OTP';
+  document.getElementById('login-alert').style.display = 'none';
+}
+
+// ── NAVIGATION ───────────────────────────────────────────────────────────────
+function showSection(sec, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.step-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + sec).classList.add('active');
+  btn.classList.add('active');
+  if (sec === 'tasks') { loadLevels(); loadTasks(); }
+  if (sec === 'pdftasks') { loadLevels(); loadContentTasks(); }
+  if (sec === 'settings') { loadSettings(); }
+  if (sec === 'quotes') { loadQuotes(); }
+  if (sec === 'users') loadUsers();
+}
+
+function updateStepStatus() {
+  ['codes','levels','tasks','pdftasks','users'].forEach(s => {
+    const circle = document.getElementById('sc-' + s);
+    const btn = document.getElementById('nav-' + s);
+    const hasDone =
+      s === 'codes' ? codesData.length > 0 :
+      s === 'levels' ? levelsData.length > 0 :
+      s === 'tasks' ? tasksData.length > 0 :
+      usersData.length > 0;
+    if (hasDone && !btn.classList.contains('active')) {
+      btn.classList.add('done');
+      circle.innerHTML = '<i class="ti ti-check" style="font-size:13px"></i>';
+    }
+  });
+}
+
+function showAlert(id, msg, isError) {
+  const el = document.getElementById(id + '-alert');
+  el.innerHTML = `<i class="ti ti-${isError?'alert-circle':'check'}"></i>${msg}`;
+  el.className = 'alert ' + (isError ? 'alert-error' : 'alert-success');
+  el.style.display = 'flex';
+  if (!isError) setTimeout(() => el.style.display = 'none', 3000);
+}
+
+// ── CONFIRM MODAL ─────────────────────────────────────────────────────────────
+function openModal(title, body, action) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent = body;
+  pendingAction = action;
+  document.getElementById('confirm-modal').style.display = 'flex';
+}
+function closeModal() {
+  document.getElementById('confirm-modal').style.display = 'none';
+  pendingAction = null;
+}
+async function confirmAction() {
+  if (pendingAction) await pendingAction();
+  closeModal();
+}
+
+// ── SIGNUP CODES ─────────────────────────────────────────────────────────────
+async function createSignupCode() {
+  const code = document.getElementById('new-code').value.trim().toUpperCase();
+  const uses = parseInt(document.getElementById('new-uses').value) || 100;
+  if (!code) return showAlert('codes', 'Please enter a code', true);
+  const btn = document.getElementById('create-code-btn');
+  btn.disabled = true;
+  try {
+    await api('POST', `/auth/admin/create-signup-code?code=${code}&max_uses=${uses}`);
+    codesData.push({ code, max_uses: uses, current_uses: 0, is_active: true });
+    renderCodes();
+    document.getElementById('new-code').value = '';
+    showAlert('codes', `Code "${code}" created!`, false);
+    updateStepStatus();
+  } catch(e) { showAlert('codes', e.message, true); }
+  btn.disabled = false;
+}
+
+function renderCodes() {
+  document.getElementById('codes-count').textContent =
+    `Existing codes (${codesData.length})`;
+  if (!codesData.length) {
+    document.getElementById('codes-list').innerHTML =
+      '<div class="empty"><i class="ti ti-ticket"></i><p>No codes yet</p></div>';
+    return;
+  }
+  document.getElementById('codes-list').innerHTML = codesData.map(c => `
+    <div class="list-row">
+      <div>
+        <div class="row-title" style="font-family:monospace;font-size:15px">${c.code}</div>
+        <div class="row-sub">${c.current_uses} / ${c.max_uses} uses</div>
+      </div>
+      <div class="tags">
+        <span class="badge badge-green">Active</span>
+      </div>
+    </div>`).join('');
+}
+
+// ── PROGRAM LEVELS ────────────────────────────────────────────────────────────
+async function loadLevels() {
+  try {
+    levelsData = await api('GET', '/admin/levels');
+    renderLevels();
+    populateLevelDropdowns();
+    updateStepStatus();
+  } catch(e) { console.error('Load levels:', e); }
+}
+
+async function createLevel() {
+  const name = document.getElementById('level-name').value.trim();
+  const desc = document.getElementById('level-desc').value.trim();
+  const order = parseInt(document.getElementById('level-order').value) || 1;
+  if (!name) return showAlert('levels', 'Please enter a level name', true);
+  const btn = document.getElementById('create-level-btn');
+  btn.disabled = true;
+  try {
+    const res = await api('POST',
+      `/admin/levels?name=${encodeURIComponent(name)}&description=${encodeURIComponent(desc)}&order=${order}`);
+    levelsData.push({ id: res.id, name, description: desc, order });
+    levelsData.sort((a,b) => a.order - b.order);
+    renderLevels();
+    populateLevelDropdowns();
+    document.getElementById('level-name').value = '';
+    document.getElementById('level-desc').value = '';
+    document.getElementById('level-order').value = levelsData.length;
+    showAlert('levels', `Level "${name}" created!`, false);
+    updateStepStatus();
+  } catch(e) { showAlert('levels', e.message, true); }
+  btn.disabled = false;
+}
+
+async function removeLevel(id, name) {
+  openModal('Remove level', `Remove "${name}"? Tasks assigned to this level will become visible to all users.`, async () => {
+    try {
+      await api('DELETE', `/admin/levels/${id}`);
+      levelsData = levelsData.filter(l => l.id !== id);
+      renderLevels();
+      populateLevelDropdowns();
+      showAlert('levels', `Level "${name}" removed`, false);
+    } catch(e) { showAlert('levels', e.message, true); }
+  });
+}
+
+function renderLevels() {
+  document.getElementById('levels-count').textContent =
+    `Program levels (${levelsData.length})`;
+  if (!levelsData.length) {
+    document.getElementById('levels-list').innerHTML =
+      '<div class="empty"><i class="ti ti-layers"></i><p>No levels yet</p></div>';
+    return;
+  }
+  document.getElementById('levels-list').innerHTML = levelsData.map(l => `
+    <div class="list-row">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="width:32px;height:32px;border-radius:8px;background:var(--primary-lt);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--primary-dk);flex-shrink:0">${l.order}</div>
+        <div>
+          <div class="row-title" style="display:flex;align-items:center;gap:8px">
+            ${l.name}
+            ${l.is_system ? `<span class="badge badge-blue" style="font-size:10px">System</span>` : ''}
+          </div>
+          ${l.description ? `<div class="row-sub">${l.description}</div>` : ''}
+        </div>
+      </div>
+      ${!l.is_system ? `
+      <button class="btn btn-danger" onclick="removeLevel('${l.id}','${l.name}')"
+              style="padding:5px 12px;font-size:12px">
+        <i class="ti ti-trash"></i>Remove
+      </button>` : `
+      <span style="font-size:11px;color:var(--text3);padding:4px 8px">Protected</span>
+      `}
+    </div>`).join('');
+}
+
+function populateLevelDropdowns() {
+  const opts = `<option value="">All levels</option>` +
+    levelsData.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
+  document.getElementById('task-level').innerHTML = opts;
+  document.getElementById('tasks-filter').innerHTML = opts;
+}
+
+// ── TASKS ─────────────────────────────────────────────────────────────────────
+function toggleInfoContent() {
+  const type = document.getElementById('task-info-type').value;
+  const labels = { text: 'Info text', image: 'Image URL', video: 'Video URL' };
+  document.getElementById('info-content-wrap').style.display =
+    type === 'none' ? 'none' : 'block';
+  if (type !== 'none')
+    document.getElementById('info-content-label').textContent = labels[type];
+}
+
+async function createTask() {
+  const title = document.getElementById('task-title').value.trim();
+  if (!title) return showAlert('tasks', 'Please enter a task title', true);
+  const btn = document.getElementById('create-task-btn');
+  btn.disabled = true;
+  const levelId = document.getElementById('task-level').value;
+  const poolType = document.querySelector('input[name="task-pool"]:checked')?.value || 'myseed';
+  const payload = {
+    title,
+    description: document.getElementById('task-desc').value.trim() || null,
+    frequency: document.getElementById('task-freq').value,
+    points: parseInt(document.getElementById('task-pts').value) || 10,
+    info_type: document.getElementById('task-info-type').value,
+    info_content: document.getElementById('task-info-content').value.trim() || null,
+    program_level_id: levelId || null,
+    pool_type: poolType,
+  };
+  try {
+    await api('POST', '/tasks/admin/create', payload);
+    await loadTasks();
+    document.getElementById('task-title').value = '';
+    document.getElementById('task-desc').value = '';
+    document.getElementById('task-info-content').value = '';
+    document.getElementById('task-info-type').value = 'none';
+    document.getElementById('task-level').value = '';
+    document.getElementById('info-content-wrap').style.display = 'none';
+    const levelName = levelId
+      ? (levelsData.find(l => l.id === levelId)?.name || 'selected level')
+      : 'all levels';
+    showAlert('tasks', `Task "${title}" created for ${levelName}!`, false);
+    updateStepStatus();
+  } catch(e) { showAlert('tasks', e.message, true); }
+  btn.disabled = false;
+}
+
+async function loadTasks() {
+  try {
+    tasksData = await api('GET', '/admin/tasks');
+    filterTasks();
+    updateStepStatus();
+  } catch(e) { console.error('Load tasks:', e); }
+}
+
+function filterTasks() {
+  const levelFilter = document.getElementById('tasks-filter').value;
+  const filtered = levelFilter
+    ? tasksData.filter(t => {
+        const ic = t.info_content || '';
+        return !ic.startsWith('pdf:') && !ic.startsWith('excel:');
+      })
+    : tasksData.filter(t => {
+        const ic = t.info_content || '';
+        return !ic.startsWith('pdf:') && !ic.startsWith('excel:');
+      });
+  renderTasks(filtered);
+}
+
+function renderTasks(tasks) {
+  // Only show fixed content tasks (no pdf/excel)
+  const allT = tasks || tasksData;
+  const t = allT.filter(task => {
+    const ic = task.info_content || '';
+    return !ic.startsWith('pdf:') && !ic.startsWith('excel:');
+  });
+  document.getElementById('tasks-count').textContent = `All tasks (${t.length})`;
+  if (!t.length) {
+    document.getElementById('tasks-list').innerHTML =
+      '<div class="empty"><i class="ti ti-checkbox"></i><p>No tasks yet. Create your first task above.</p></div>';
+    return;
+  }
+  document.getElementById('tasks-list').innerHTML = t.map(task => {
+    const levelName = task.program_level_id
+      ? (levelsData.find(l => l.id === task.program_level_id)?.name || 'Specific level')
+      : 'All levels';
+    return `
+      <div class="list-row">
+        <div style="flex:1;min-width:0">
+          <div class="row-title">${task.title}</div>
+          ${task.description ? `<div class="row-sub">${task.description}</div>` : ''}
+        </div>
+        <div class="tags">
+          <span class="badge badge-amber">+${task.points} pts</span>
+          <span class="badge badge-gray">${task.frequency}</span>
+          <span class="badge badge-blue">${levelName}</span>
+          ${task.info_type !== 'none' ? `<span class="badge" style="background:#EEF2FF;color:#4F46E5">${task.info_type}</span>` : ''}
+          <span class="badge" style="background:${task.pool_type==='myseed'?'#FEF3C7':task.pool_type==='myrise'?'#D1FAE5':'#E0F2FE'};color:${task.pool_type==='myseed'?'#92400E':task.pool_type==='myrise'?'#065F46':'#0C4A6E'}">${task.pool_type==='myseed'?'🌱 MySeed':task.pool_type==='myrise'?'🌿 MyRise':'🌳 Both'}</span>
+          <button class="btn btn-danger" onclick="removeTask('${task.id}','${task.title}')"
+                  style="padding:5px 12px;font-size:12px">
+            <i class="ti ti-trash"></i>Remove
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+}
+async function removeTask(id, title) {
+  openModal('Remove task', `Remove "${title}"? Users will no longer see this task.`, async () => {
+    try {
+      await api('DELETE', `/admin/tasks/${id}`);
+      tasksData = tasksData.filter(t => t.id !== id);
+      renderTasks(tasksData);
+    } catch(e) { showAlert('tasks', e.message, true); }
+  });
+}
+// ── USERS ─────────────────────────────────────────────────────────────────────
+async function loadUsers() {
+  try {
+    usersData = await api('GET', '/admin/users');
+    renderUsers();
+    updateStepStatus();
+  } catch(e) {
+    document.getElementById('users-list').innerHTML =
+      '<div class="empty"><i class="ti ti-alert-circle"></i><p>Could not load users. Make sure you have admin access.</p></div>';
+  }
+}
+
+async function removeUser(id, name) {
+  openModal(
+    'Remove user',
+    `Remove ${name}? This action cannot be undone. All their data will be deleted.`,
+    async () => {
+      try {
+        await api('DELETE', `/admin/users/${id}`);
+        usersData = usersData.filter(u => u.id !== id);
+        renderUsers();
+        showAlert && console.log('User removed');
+      } catch(e) { alert(e.message); }
+    }
+  );
+}
+
+function renderUsers() {
+  document.getElementById('users-count').textContent = `Users (${usersData.length})`;
+  if (!usersData.length) {
+    document.getElementById('users-list').innerHTML =
+      '<div class="empty"><i class="ti ti-users"></i><p>No users registered yet</p></div>';
+    return;
+  }
+  document.getElementById('users-list').innerHTML = usersData.map(u => {
+    const isAdmin = u.role === 'admin';
+    const currentLevel = u.program_level_id || '';
+    const levelOptions = levelsData.map(l =>
+      `<option value="${l.id}" ${currentLevel === l.id ? 'selected' : ''}>${l.name}</option>`
+    ).join('');
+    return `
+      <div class="list-row" style="flex-wrap:wrap;gap:12px">
+        <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:200px">
+          <div class="avatar">${u.name[0].toUpperCase()}</div>
+          <div>
+            <div class="row-title" style="display:flex;align-items:center;gap:6px">
+              ${u.name}
+              ${isAdmin ? '<span class="badge badge-blue" style="font-size:10px">Admin</span>' : ''}
+            </div>
+            <div class="row-sub">${u.phone}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span class="badge" style="background:var(--primary-lt);color:var(--primary-dk)">${u.achievement_level}</span>
+          <span class="badge badge-amber">${u.total_points} pts</span>
+          ${!isAdmin ? `
+          <select id="level-select-${u.id}"
+                  style="padding:5px 8px;font-size:12px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);min-width:120px"
+                  onchange="updateUserLevel('${u.id}', '${u.name}', this.value)">
+            <option value="" ${!currentLevel ? 'selected' : ''}>No level</option>
+            ${levelOptions}
+          </select>
+          <button class="btn btn-danger" onclick="removeUser('${u.id}','${u.name}')"
+                  style="padding:5px 12px;font-size:12px">
+            <i class="ti ti-user-minus"></i>Remove
+          </button>` : ''}
+        </div>
+      </div>`;
+  }).join('');
+}
+async function updateUserLevel(userId, userName, levelId) {
+  try {
+    await api("PUT", `/admin/users/${userId}/level?level_id=${encodeURIComponent(levelId)}`);
+    const user = usersData.find(u => u.id === userId);
+    if (user) user.program_level_id = levelId;
+    const select = document.getElementById("level-select-" + userId);
+    if (select) {
+      select.style.borderColor = "var(--primary)";
+      setTimeout(() => select.style.borderColor = "", 2000);
+    }
+  } catch(e) { alert("Failed: " + e.message); await loadUsers(); }
+}
+
+// ── PDF Tasks ──────────────────────────────────────────────────────────────
+let pdfRowCount = 0;
+let existingPdfs = [];
+
+function addPdfLevelRow() {
+  const container = document.getElementById('pdf-level-rows');
+  const id = ++pdfRowCount;
+  const levelOpts = levelsData.map(l =>
+    `<option value="${l.order !== undefined ? l.order : 0}">${l.name} (order ${l.order})</option>`
+  ).join('') || '<option value="0">Level 0</option>';
+
+  const row = document.createElement('div');
+  row.id = `pdf-row-${id}`;
+  row.style.cssText = 'display:flex;gap:10px;align-items:center;margin-bottom:8px';
+  row.innerHTML = `
+    <div style="flex:2">
+      <select style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-primary);font-size:13px">
+        ${levelOpts}
+      </select>
+    </div>
+    <div style="flex:1">
+      <input type="number" value="1" min="1" placeholder="Pages/day"
+        style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-primary);font-size:13px">
+    </div>
+    <div style="flex:1;font-size:11px;color:var(--text-secondary);padding-top:2px">pages per day</div>
+    <button onclick="document.getElementById('pdf-row-${id}').remove()"
+      style="padding:7px 10px;background:var(--bg-danger,#FEE2E2);color:var(--text-danger,#991B1B);border:none;border-radius:8px;cursor:pointer;flex-shrink:0">
+      <i class="ti ti-trash"></i>
+    </button>`;
+  container.appendChild(row);
+}
+
+function togglePdfSource(val) {
+  document.getElementById('pdf-upload-section').style.display = val === 'upload' ? 'block' : 'none';
+  document.getElementById('pdf-existing-section').style.display = val === 'existing' ? 'block' : 'none';
+  if (val === 'existing') loadExistingPdfs();
+}
+
+async function loadExistingPdfs() {
+  try {
+    existingPdfs = await api('GET', '/pdfs/');
+    const sel = document.getElementById('pdf-existing-select');
+    if (!existingPdfs.length) {
+      sel.innerHTML = '<option value="">No PDFs uploaded yet</option>';
+      return;
+    }
+    sel.innerHTML = '<option value="">-- Select a PDF --</option>' +
+      existingPdfs.map(p =>
+        `<option value="${p.id}">${p.title} (${p.total_pages} pages)</option>`
+      ).join('');
+  } catch(e) { console.error('Load PDFs:', e); }
+}
+
+async function createPdfTask() {
+  const name = document.getElementById('pdf-task-name').value.trim();
+  if (!name) return showAlert('pdftasks', 'Please enter a task name', true);
+
+  const rows = document.querySelectorAll('#pdf-level-rows > div');
+  if (!rows.length) return showAlert('pdftasks', 'Add at least one level assignment', true);
+
+  const assignments = [];
+  rows.forEach(row => {
+    const sel = row.querySelector('select');
+    const inp = row.querySelector('input[type=number]');
+    if (sel && inp) assignments.push({
+      level_order: parseInt(sel.value),
+      pages_per_day: parseInt(inp.value) || 1,
+    });
+  });
+
+  const source = document.querySelector('input[name="pdf-source"]:checked').value;
+  const btn = document.getElementById('create-pdf-task-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i>Creating...';
+
+  try {
+    const formData = new FormData();
+    formData.append('task_name', name);
+    formData.append('frequency', document.getElementById('pdf-task-freq').value);
+    formData.append('points', document.getElementById('pdf-task-points').value);
+    formData.append('assignments_json', JSON.stringify(assignments));
+
+    if (source === 'upload') {
+      const fileInput = document.getElementById('pdf-file-input');
+      const pdfTitle = document.getElementById('pdf-new-title').value.trim();
+      if (!fileInput.files[0]) {
+        showAlert('pdftasks', 'Please select a PDF file', true);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-file-plus"></i>Create PDF task';
+        return;
+      }
+      if (!pdfTitle) {
+        showAlert('pdftasks', 'Please enter a PDF title', true);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-file-plus"></i>Create PDF task';
+        return;
+      }
+      formData.append('file', fileInput.files[0]);
+      formData.append('pdf_title', pdfTitle);
+    } else {
+      const pdfId = document.getElementById('pdf-existing-select').value;
+      if (!pdfId) {
+        showAlert('pdftasks', 'Please select a PDF', true);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-file-plus"></i>Create PDF task';
+        return;
+      }
+      formData.append('pdf_book_id', pdfId);
+      formData.append('pdf_title', '');
+    }
+
+    const res = await fetch(`${API}/pdfs/create-pdf-task`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to create' }));
+      throw new Error(err.detail || 'Error');
+    }
+
+    const data = await res.json();
+    showAlert('pdftasks', `"${name}" created with ${assignments.length} level assignment(s)!`, false);
+
+    // Reset form
+    document.getElementById('pdf-task-name').value = '';
+    document.getElementById('pdf-new-title').value = '';
+    document.getElementById('pdf-file-input').value = '';
+    document.getElementById('pdf-level-rows').innerHTML = '';
+    pdfRowCount = 0;
+    await loadPdfTasks();
+
+  } catch(e) {
+    showAlert('pdftasks', e.message, true);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-file-plus"></i>Create PDF task';
+}
+
+async function loadPdfTasks() {
+  try {
+    const tasks = await api('GET', '/pdfs/tasks');
+    document.getElementById('pdftasks-count').textContent = `PDF tasks (${tasks.length})`;
+
+    if (!tasks.length) {
+      document.getElementById('pdftasks-list').innerHTML =
+        '<div class="empty"><i class="ti ti-file-text"></i><p>No PDF tasks yet. Create your first one above.</p></div>';
+      return;
+    }
+
+    document.getElementById('pdftasks-list').innerHTML = tasks.map(t => `
+      <div class="list-row" style="flex-direction:column;align-items:flex-start;gap:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;width:100%">
+          <div>
+            <div class="row-title">${t.title}</div>
+            <div class="row-sub">${t.frequency} · +${t.points} pts</div>
+          </div>
+          <div class="tags">
+            <span class="badge badge-gray">${t.frequency}</span>
+            <span class="badge badge-amber">+${t.points} pts</span>
+            <button class="btn btn-danger" onclick="deletePdfTask('${t.id}','${t.title}')"
+                    style="padding:5px 12px;font-size:12px">
+              <i class="ti ti-trash"></i>Remove
+            </button>
+          </div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;width:100%">
+          ${t.level_assignments.map(a => `
+            <div style="background:var(--primary-lt,#E1F5EE);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--primary-dk,#085041)">
+              <strong>Level ${a.level_order}</strong> — ${a.pages_per_day} page(s)/day
+              from "${a.pdf_title}" (${a.total_pages} pages total)
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error('Load PDF tasks:', e); }
+}
+
+async function deletePdfTask(id, title) {
+  openModal('Remove PDF task',
+    `Remove "${title}"? Users will no longer see this task.`,
+    async () => {
+      try {
+        await api('DELETE', `/pdfs/tasks/${id}`);
+        await loadPdfTasks();
+        showAlert && console.log('PDF task removed');
+      } catch(e) { alert(e.message); }
+    }
+  );
+}
+
+
+// ── Settings ──────────────────────────────────────────────────────────────
+async function loadSettings() {
+  try {
+    const data = await api('GET', '/settings/');
+    const fields = {
+      'setting-taraweeh-returning': 'taraweeh_motivation_phrase',
+      'setting-taraweeh-first':     'taraweeh_first_year_phrase',
+      'setting-welcome':            'welcome_message',
+      'setting-myseed-title':       'myseed_title',
+      'setting-myseed-desc':        'myseed_description',
+      'setting-myrise-title':       'myrise_title',
+      'setting-myrise-desc':        'myrise_description',
+    };
+    for (const [id, key] of Object.entries(fields)) {
+      const el = document.getElementById(id);
+      if (el) el.value = data[key] || '';
+    }
+  } catch(e) { console.error('Load settings:', e); }
+}
+
+async function saveSignupInfo() {
+  const fields = {
+    'welcome_message':    document.getElementById('setting-welcome')?.value.trim(),
+    'myseed_title':       document.getElementById('setting-myseed-title')?.value.trim(),
+    'myseed_description': document.getElementById('setting-myseed-desc')?.value.trim(),
+    'myrise_title':       document.getElementById('setting-myrise-title')?.value.trim(),
+    'myrise_description': document.getElementById('setting-myrise-desc')?.value.trim(),
+  };
+  try {
+    for (const [key, value] of Object.entries(fields)) {
+      if (value) await api('PUT', `/settings/${key}`, { value });
+    }
+    showAlert('settings', '✅ Signup info saved!', false);
+  } catch(e) {
+    showAlert('settings', e.message, true);
+  }
+}
+
+async function saveSettings() {
+  const returning = document.getElementById('setting-taraweeh-returning').value.trim();
+  const first = document.getElementById('setting-taraweeh-first').value.trim();
+
+  try {
+    if (returning) {
+      await api('PUT', '/settings/taraweeh_motivation_phrase',
+        { value: returning });
+    }
+    if (first) {
+      await api('PUT', '/settings/taraweeh_first_year_phrase',
+        { value: first });
+    }
+    showAlert('settings', 'Settings saved successfully!', false);
+  } catch(e) {
+    showAlert('settings', e.message, true);
+  }
+}
+
+
+// ── Quotes ────────────────────────────────────────────────────────────────
+async function uploadQuotes() {
+  const fileInput = document.getElementById('quotes-file');
+  if (!fileInput.files[0]) {
+    showAlert('quotes', 'Please select a file', true);
+    return;
+  }
+  const formData = new FormData();
+  formData.append('file', fileInput.files[0]);
+  try {
+    const res = await fetch(`${API}/quotes/admin/upload`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Upload failed');
+    showAlert('quotes', `✅ ${data.added} quotes imported!${data.errors.length ? ' Some rows skipped.' : ''}`, false);
+    fileInput.value = '';
+    await loadQuotes();
+  } catch(e) { showAlert('quotes', e.message, true); }
+}
+
+async function addQuote() {
+  const text = document.getElementById('quote-text').value.trim();
+  if (!text) return showAlert('quotes', 'Please enter quote text', true);
+  try {
+    await api('POST', '/quotes/admin/add', {
+      text,
+      source: document.getElementById('quote-source').value.trim() || null,
+    });
+    document.getElementById('quote-text').value = '';
+    document.getElementById('quote-source').value = '';
+    showAlert('quotes', 'Quote added!', false);
+    await loadQuotes();
+  } catch(e) { showAlert('quotes', e.message, true); }
+}
+
+async function loadQuotes() {
+  try {
+    const quotes = await api('GET', '/quotes/admin/all');
+    document.getElementById('quotes-count').textContent = `All quotes (${quotes.length})`;
+    if (!quotes.length) {
+      document.getElementById('quotes-list').innerHTML =
+        '<div class="empty"><i class="ti ti-quote"></i><p>No quotes yet</p></div>';
+      return;
+    }
+    const catColors = {
+      quran: 'background:#E0F2FE;color:#0C4A6E',
+      hadith: 'background:#E1F5EE;color:#085041',
+      motivational: 'background:#FAEEDA;color:#633806',
+      general: 'background:var(--bg);color:var(--text2)',
+    };
+    document.getElementById('quotes-list').innerHTML = quotes.map(q => `
+      <div class="list-row">
+        <div style="flex:1;min-width:0">
+          <div class="row-title" style="font-size:13px;line-height:1.5">"${q.text}"</div>
+          ${q.source ? `<div class="row-sub">— ${q.source}</div>` : ''}
+        </div>
+        <div class="tags">
+          <span class="badge" style="${catColors[q.category]||catColors.general}">${q.category}</span>
+          <button class="btn btn-danger" onclick="deleteQuote('${q.id}')"
+                  style="padding:5px 10px;font-size:12px">
+            <i class="ti ti-trash"></i>
+          </button>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error('Load quotes:', e); }
+}
+
+async function deleteQuote(id) {
+  openModal('Remove quote', 'Remove this quote?', async () => {
+    try {
+      await api('DELETE', `/quotes/admin/${id}`);
+      await loadQuotes();
+    } catch(e) { alert(e.message); }
+  });
+}
+
+
+// ── Content Tasks ──────────────────────────────────────────────────────────
+
+// File type detection
+document.addEventListener('DOMContentLoaded', function() {
+  const fi = document.getElementById('content-file-input');
+  if (fi) fi.addEventListener('change', detectFileType);
+});
+
+function detectFileType() {
+  const fi = document.getElementById('content-file-input');
+  const hint = document.getElementById('file-detected');
+  const pdfSection = document.getElementById('pdf-level-assignments');
+  if (!fi.files[0]) { hint.style.display='none'; return; }
+  const name = fi.files[0].name.toLowerCase();
+  hint.style.display = 'block';
+  if (name.endsWith('.pdf')) {
+    hint.innerHTML = '<span style="color:var(--primary)"><i class="ti ti-file-type-pdf"></i> PDF detected — rotating pages daily. Add level assignments below.</span>';
+    pdfSection.style.display = 'block';
+  } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+    hint.innerHTML = '<span style="color:#0C447C"><i class="ti ti-file-spreadsheet"></i> Excel detected — Col A (content) + Col B (information), rotates daily by row.</span>';
+    pdfSection.style.display = 'none';
+  }
+}
+
+function addPdfLevelRow() {
+  const container = document.getElementById('pdf-level-rows');
+  const id = ++pdfRowCount;
+  const levelOpts = levelsData.map(l =>
+    `<option value="${l.order !== undefined ? l.order : 0}">${l.name} (order ${l.order})</option>`
+  ).join('') || '<option value="0">Level 0</option>';
+  const row = document.createElement('div');
+  row.id = `pdf-row-${id}`;
+  row.style.cssText = 'display:flex;gap:10px;align-items:center;margin-bottom:8px';
+  row.innerHTML = `
+    <div style="flex:2">
+      <select style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-primary);font-size:13px">
+        ${levelOpts}
+      </select>
+    </div>
+    <div style="flex:1">
+      <input type="number" value="1" min="1" placeholder="Pages/day"
+        style="width:100%;padding:8px 10px;border:0.5px solid var(--border);border-radius:8px;background:var(--surface-2);color:var(--text-primary);font-size:13px">
+    </div>
+    <div style="flex:1;font-size:11px;color:var(--text-secondary)">pages/day</div>
+    <button onclick="document.getElementById('pdf-row-${id}').remove()"
+      style="padding:7px 10px;background:var(--bg-danger,#FEE2E2);color:var(--text-danger,#991B1B);border:none;border-radius:8px;cursor:pointer">
+      <i class="ti ti-trash"></i>
+    </button>`;
+  container.appendChild(row);
+}
+
+async function createContentTask() {
+  const name = document.getElementById('pdf-task-name').value.trim();
+  if (!name) return showAlert('pdftasks', 'Please enter a task name', true);
+  const btn = document.getElementById('create-content-task-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i>Creating...';
+
+  try {
+    const formData = new FormData();
+    formData.append('task_name', name);
+    formData.append('frequency', document.getElementById('pdf-task-freq').value);
+    formData.append('points', document.getElementById('pdf-task-points').value);
+    formData.append('pool_type', document.getElementById('pdf-task-pool').value);
+    const levelId = document.getElementById('pdf-task-level').value;
+    if (levelId) formData.append('program_level_id', levelId);
+
+    const fileInput = document.getElementById('content-file-input');
+    if (fileInput.files[0]) {
+      formData.append('file', fileInput.files[0]);
+      // Add PDF level assignments if PDF
+      const fname = fileInput.files[0].name.toLowerCase();
+      if (fname.endsWith('.pdf')) {
+        const rows = document.querySelectorAll('#pdf-level-rows > div');
+        const assignments = [];
+        rows.forEach(row => {
+          const sel = row.querySelector('select');
+          const inp = row.querySelector('input[type=number]');
+          if (sel && inp) assignments.push({
+            level_order: parseInt(sel.value),
+            pages_per_day: parseInt(inp.value) || 1,
+          });
+        });
+        if (assignments.length > 0) {
+          formData.append('assignments_json', JSON.stringify(assignments));
+        }
+      }
+    }
+
+    const res = await fetch(`${API}/content-tasks/create`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed' }));
+      throw new Error(err.detail || 'Error');
+    }
+    const data = await res.json();
+    showAlert('pdftasks',
+      `"${name}" created! Type: ${data.type}`, false);
+
+    // Reset form
+    document.getElementById('pdf-task-name').value = '';
+    document.getElementById('content-file-input').value = '';
+    document.getElementById('pdf-level-rows').innerHTML = '';
+    document.getElementById('file-detected').style.display = 'none';
+    document.getElementById('pdf-level-assignments').style.display = 'none';
+    pdfRowCount = 0;
+    await loadContentTasks();
+  } catch(e) {
+    showAlert('pdftasks', e.message, true);
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-plus"></i>Create task';
+}
+
+async function loadContentTasks() {
+  try {
+    const allTasks = await api('GET', '/content-tasks/list');
+    // Only show PDF and Excel tasks here
+    const tasks = allTasks.filter(t => t.content_type === 'pdf' || t.content_type === 'excel');
+    document.getElementById('pdftasks-count').textContent =
+      `PDF & Excel tasks (${tasks.length})`;
+    if (!tasks.length) {
+      document.getElementById('pdftasks-list').innerHTML =
+        '<div class="empty"><i class="ti ti-file-text"></i><p>No tasks yet</p></div>';
+      return;
+    }
+    const typeColors = {
+      pdf:   'background:#FEE2E2;color:#991B1B',
+      excel: 'background:#D1FAE5;color:#065F46',
+      fixed: 'background:#E6F1FB;color:#0C447C',
+    };
+    const typeIcons = {
+      pdf: 'ti-file-type-pdf',
+      excel: 'ti-file-spreadsheet',
+      fixed: 'ti-text-size',
+    };
+    const poolColors = {
+      myseed: 'background:#FEF3C7;color:#92400E',
+      myrise: 'background:#D1FAE5;color:#065F46',
+      both:   'background:#E0F2FE;color:#0C4A6E',
+    };
+    const poolLabels = {
+      myseed: '🌱 MySeed',
+      myrise: '🌿 MyRise',
+      both:   '🌳 Both',
+    };
+
+    document.getElementById('pdftasks-list').innerHTML = tasks.map(t => `
+      <div class="list-row" style="flex-wrap:wrap;gap:10px">
+        <div style="flex:1;min-width:200px">
+          <div class="row-title">${t.title}</div>
+          <div class="row-sub">
+            ${t.content_type === 'pdf'
+              ? `${t.pdf_title || ''} · ${t.total_pages || 0} pages`
+              : t.content_type === 'excel'
+                ? `${t.total_rows || 0} rows · rotates daily`
+                : 'Fixed content'}
+          </div>
+        </div>
+        <div class="tags">
+          <span class="badge" style="${typeColors[t.content_type]||typeColors.fixed}">
+            <i class="ti ${typeIcons[t.content_type]||typeIcons.fixed}"></i>
+            ${t.content_type}
+          </span>
+          <span class="badge badge-amber">+${t.points} pts</span>
+          <span class="badge badge-gray">${t.frequency}</span>
+          <span class="badge" style="${poolColors[t.pool_type]||poolColors.myseed}">
+            ${poolLabels[t.pool_type]||'🌱 MySeed'}
+          </span>
+          <button class="btn btn-danger" onclick="deleteContentTask('${t.id}','${t.title}')"
+                  style="padding:5px 12px;font-size:12px">
+            <i class="ti ti-trash"></i>Remove
+          </button>
+        </div>
+      </div>`).join('');
+  } catch(e) { console.error('Load tasks:', e); }
+}
+
+async function deleteContentTask(id, title) {
+  openModal('Remove task',
+    `Remove "${title}"? Users will no longer see this task.`,
+    async () => {
+      try {
+        await api('DELETE', `/content-tasks/${id}`);
+        await loadContentTasks();
+      } catch(e) { alert(e.message); }
+    }
+  );
+}
+
+// Load content tasks when section is shown
+
+
+function handleCredentials() {
+  var username = document.getElementById('admin-username').value.trim();
+  var password = document.getElementById('admin-password').value.trim();
+  if (!username || !password) { alert('Enter username and password'); return; }
+  var btn = document.getElementById('login-btn');
+  btn.disabled = true;
+  fetch('http://127.0.0.1:8000/api/v1/auth/admin/login?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password), {
+    method: 'POST', headers: {'Content-Type': 'application/json'}
+  })
+  .then(function(r){ return r.text().then(function(text) {
+    console.log('Login response:', text);
+    var data = JSON.parse(text);
+    if (data.detail) { alert(data.detail); btn.disabled=false; return; }
+    window._adminEmail = data.email || data.phone || 'dev';
+    console.log('Email/phone captured:', window._adminEmail);
+    document.getElementById('step-credentials').style.display = 'none';
+    document.getElementById('step-otp').style.display = 'block';
+    document.getElementById('otp-phone-hint').textContent = data.message || 'OTP sent';
+    btn.disabled = false;
+  }); })
+  .catch(function(e){ alert('Error: '+e.message); btn.disabled=false; });
+}
+
+function handleOtp() {
+  var otp = document.getElementById('login-otp').value.trim();
+  if (otp.length < 6) { alert('Enter 6-digit OTP'); return; }
+  var btn = document.getElementById('otp-btn');
+  btn.disabled = true;
+  var email = window._adminEmail || 'dev';
+  console.log('Verifying OTP with email:', email);
+  fetch('http://127.0.0.1:8000/api/v1/auth/admin/verify?code=' + otp, {
+    method: 'POST', headers: {'Content-Type': 'application/json'}
+  })
+  .then(function(r){ return r.text().then(function(text){
+    console.log('Verify response:', text);
+    var data = JSON.parse(text);
+    if (data.detail) { alert(data.detail); btn.disabled=false; return; }
+    token = data.access_token;
+    localStorage.setItem('rise365_admin_token', token);
+    showApp();
+  }); })
+  .catch(function(e){ alert('Error: '+e.message); btn.disabled=false; });
+}
+
+function backToCredentials() {
+  document.getElementById('step-otp').style.display = 'none';
+  document.getElementById('step-credentials').style.display = 'block';
+  document.getElementById('login-alert').style.display = 'none';
+}
+
+
+async function handleLogin() {}
+</script>
+
+
+
+</body>
+</html>

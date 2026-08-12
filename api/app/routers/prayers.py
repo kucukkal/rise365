@@ -1,15 +1,34 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, func
-from datetime import datetime, date
+from sqlalchemy import and_
+from datetime import datetime
 from app.database import get_db
 from app.models.user import User
-from app.models.prayer import PrayerLog, PrayerName
-from app.schemas.prayer import PrayerCompleteRequest, DailyPrayersResponse
+from app.models.prayer import PrayerLog
+from app.models.program_level import ProgramLevel
 from app.core.dependencies import get_current_user
-from app.services.prayer_service import get_prayer_times, ARABIC_NAMES, PRAYER_POINTS
+from app.services.prayer_service import get_prayer_times, PRAYER_POINTS, DISPLAY_NAMES, EVRAD_POINTS
+from pydantic import BaseModel
 
 router = APIRouter()
+
+class PrayerCompleteRequest(BaseModel):
+    prayer_name: str
+
+def _get_level_order(user: User, db: Session) -> int:
+    if not user.program_level_id:
+        return 0
+    try:
+        import uuid as _uuid
+        level = db.query(ProgramLevel).filter(
+            ProgramLevel.id == _uuid.UUID(str(user.program_level_id))
+        ).first()
+        return level.order if level else 0
+    except:
+        return 0
+
+def _today_start():
+    return datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
 @router.get("/today")
 async def get_today_prayers(
@@ -18,8 +37,8 @@ async def get_today_prayers(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    prayer_times = await get_prayer_times(city, country)
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = _today_start()
+    level_order = _get_level_order(current_user, db)
 
     completed_logs = db.query(PrayerLog).filter(
         and_(
@@ -29,18 +48,27 @@ async def get_today_prayers(
         )
     ).all()
 
-    completed_names = {log.prayer_name.value for log in completed_logs}
+    completed_names = {log.prayer_name for log in completed_logs}
     total_points = sum(log.points_earned for log in completed_logs)
 
-    for prayer in prayer_times:
-        prayer["is_completed"] = prayer["name"] in completed_names
+    prayers = await get_prayer_times(
+        city=city,
+        country=country,
+        level_order=level_order,
+        completed_names=completed_names,
+    )
+
+    # Count only main prayers (not evrad entries)
+    main_prayers = [p for p in prayers]
+    completed_count = sum(1 for p in main_prayers if p["is_completed"])
 
     return {
         "date": datetime.utcnow().strftime("%A, %B %d"),
         "location": f"{city}, {country}",
-        "prayers": prayer_times,
-        "total_completed": len(completed_names),
-        "total_points_earned": total_points
+        "level_order": level_order,
+        "prayers": prayers,
+        "total_completed": completed_count,
+        "total_points_earned": total_points,
     }
 
 @router.post("/complete")
@@ -49,39 +77,62 @@ def complete_prayer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = _today_start()
+    prayer_name = request.prayer_name
+    level_order = _get_level_order(current_user, db)
+    is_evrad = prayer_name.endswith("_evrad")
 
+    # If completing main prayer, check evrad done first (level 1+)
+    if not is_evrad and level_order >= 1:
+        evrad_name = f"{prayer_name}_evrad"
+        evrad_done = db.query(PrayerLog).filter(
+            and_(
+                PrayerLog.user_id == current_user.id,
+                PrayerLog.prayer_name == evrad_name,
+                PrayerLog.prayer_date >= today_start,
+                PrayerLog.is_completed == True,
+            )
+        ).first()
+        if not evrad_done:
+            base_name = prayer_name.replace("_evrad", "")
+            display = DISPLAY_NAMES.get(base_name, base_name)
+            raise HTTPException(
+                status_code=400,
+                detail=f"Complete Evrad-u Ezkar / Zikr for {display} first"
+            )
+
+    # Check existing
     existing = db.query(PrayerLog).filter(
         and_(
             PrayerLog.user_id == current_user.id,
-            PrayerLog.prayer_name == request.prayer_name,
+            PrayerLog.prayer_name == prayer_name,
             PrayerLog.prayer_date >= today_start,
         )
     ).first()
 
     if existing:
-        # Undo
-        current_user.total_points = max(0, current_user.total_points - existing.points_earned)
         db.delete(existing)
         db.commit()
-        return {"message": "Prayer unmarked", "prayer": request.prayer_name}
+        from app.services.completion_service import calculate_total_points
+        live_points = calculate_total_points(current_user, db)
+        return {"message": f"{prayer_name} unmarked", "total_points": live_points}
 
-    points = PRAYER_POINTS.get(request.prayer_name.value, 10)
+    from app.services.completion_service import calculate_total_points
+    points = EVRAD_POINTS if is_evrad else PRAYER_POINTS.get(prayer_name, 10)
     log = PrayerLog(
         user_id=current_user.id,
-        prayer_name=request.prayer_name,
+        prayer_name=prayer_name,
         prayer_date=datetime.utcnow(),
         completed_at=datetime.utcnow(),
         points_earned=points,
-        is_completed=True
+        is_completed=True,
     )
     db.add(log)
-    current_user.total_points += points
     db.commit()
 
+    display = DISPLAY_NAMES.get(prayer_name.replace("_evrad", ""), prayer_name)
     return {
-        "message": "Prayer completed",
-        "prayer": request.prayer_name,
+        "message": f"{display} {'Evrad' if is_evrad else ''} completed",
         "points_earned": points,
-        "total_points": current_user.total_points
+        "total_points": calculate_total_points(current_user, db),
     }
