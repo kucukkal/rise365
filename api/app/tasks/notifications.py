@@ -109,7 +109,7 @@ def send_prayer_reminder(prayer_name: str, reminder_num: int, prayer_time: str):
             body = f"40 minutes since {display} ({prayer_time}) — don't miss it"
 
         count = send_multicast(tokens, title, body,
-                               {"type": "prayer", "prayer": prayer_name, "tab": "prayer"})
+                               {"type": "prayer", "prayer": prayer_name})
         print(f"✅ {display} reminder {reminder_num}: {count}/{len(tokens)} sent")
 
     finally:
@@ -133,52 +133,16 @@ def send_daily_task_reminder(period: str):
             return
 
         if period == "morning":
-            users_with_tokens = db.query(User).filter(
-                User.fcm_token.isnot(None),
-                User.is_active == True,
-                User.role == "user",
-            ).all()
-
-            if not users_with_tokens:
-                print("⚠️  No FCM tokens found")
+            tokens = _get_tokens(db)
+            print(f"📱 Found {len(tokens)} users with FCM tokens")
+            print(f"📋 Found {len(daily_tasks)} daily tasks")
+            if not tokens:
+                print("⚠️  No FCM tokens found — no notifications sent")
                 return
-
-            # Send personalized count per user based on their pool type
-            from app.models.program_level import ProgramLevel
-            import uuid as _uuid
-            sent = 0
-            for user in users_with_tokens:
-                # Get user level type
-                user_level_type = "seed"
-                if user.program_level_id:
-                    try:
-                        lv = db.query(ProgramLevel).filter(
-                            ProgramLevel.id == _uuid.UUID(str(user.program_level_id))
-                        ).first()
-                        user_level_type = getattr(lv, "level_type", "seed") if lv else "seed"
-                    except:
-                        pass
-
-                # Filter tasks by pool type
-                if user_level_type == "myrise":
-                    user_tasks = [t for t in daily_tasks
-                                  if getattr(t, "pool_type", "myseed") in ("myrise", "both")]
-                else:
-                    user_tasks = [t for t in daily_tasks
-                                  if getattr(t, "pool_type", "myseed") in ("myseed", "both")]
-
-                if not user_tasks:
-                    continue
-
-                title = "Rise365 — Good morning!"
-                body = f"You have {len(user_tasks)} daily task{'s' if len(user_tasks) > 1 else ''} today. Let's rise!"
-                send_notification(user.fcm_token, title, body, {
-                    "type": "daily_morning",
-                    "tab": "tasks",
-                    "frequency": "daily"
-                })
-                sent += 1
-            print(f"✅ Daily morning: {sent} personalized notifications sent")
+            title = "Rise365 — Good morning!"
+            body = f"You have {len(daily_tasks)} daily tasks today. Let's rise!"
+            count = send_multicast(tokens, title, body, {"type": "daily_morning"})
+            print(f"✅ Daily morning: {count}/{len(tokens)} sent")
 
         else:  # evening — only uncompleted
             all_users = db.query(User).filter(
@@ -201,7 +165,7 @@ def send_daily_task_reminder(period: str):
                         user.fcm_token,
                         "Rise365 — Evening check-in",
                         f"You have {len(pending)} daily task{'s' if len(pending)>1 else ''} still to complete",
-                        {"type": "daily_evening", "tab": "tasks", "frequency": "daily"}
+                        {"type": "daily_evening"}
                     )
     finally:
         db.close()
@@ -230,7 +194,7 @@ def send_weekly_task_reminder(day: str):
             send_multicast(tokens,
                 "Rise365 — New week!",
                 f"A fresh week begins. You have {len(weekly_tasks)} weekly tasks",
-                {"type": "weekly_monday", "tab": "tasks", "frequency": "weekly"})
+                {"type": "weekly_monday"})
         else:
             day_labels = {"friday": "Friday", "sunday": "Sunday"}
             all_users = db.query(User).filter(
@@ -282,7 +246,7 @@ def send_monthly_task_reminder(period: str):
             send_multicast(tokens,
                 "Rise365 — New month!",
                 f"A new month begins. {len(monthly_tasks)} monthly tasks assigned",
-                {"type": "monthly_start", "tab": "tasks", "frequency": "monthly"})
+                {"type": "monthly_start"})
         else:
             labels = {"mid": ("14th", "halfway through"),
                       "end": ("28th", "3 days left")}
@@ -308,272 +272,7 @@ def send_monthly_task_reminder(period: str):
                         user.fcm_token,
                         f"Rise365 — {day_label} of the month",
                         f"{time_label.capitalize()} — {len(pending)} monthly task{'s' if len(pending)>1 else ''} still to complete",
-                        {"type": f"monthly_{period}", "tab": "tasks", "frequency": "monthly"}
+                        {"type": f"monthly_{period}"}
                     )
-    finally:
-        db.close()
-
-# ── Event reminders ───────────────────────────────────────────────────────────
-
-@celery.task
-def schedule_event_reminders():
-    """Schedule reminders for upcoming events — runs daily at midnight"""
-    from app.models.event import Event
-    from app.services.islamic_calendar_service import (
-        get_next_occurrence_weekly, get_next_occurrence_monthly
-    )
-    import asyncio
-
-    db = SessionLocal()
-    try:
-        events = db.query(Event).filter(Event.is_active == True).all()
-        now = datetime.now()
-
-        for event in events:
-            next_occ = None
-            try:
-                if event.event_type == "weekly" and event.day_of_week is not None:
-                    next_occ = get_next_occurrence_weekly(
-                        event.day_of_week, event.start_time or "09:00")
-                elif event.event_type == "monthly":
-                    next_occ = get_next_occurrence_monthly(
-                        day_of_month=event.day_of_month,
-                        week_of_month=event.week_of_month,
-                        day_of_week=event.day_of_week,
-                        start_time=event.start_time or "09:00"
-                    )
-                elif event.event_type == "fixed":
-                    if event.fixed_type == "jummah":
-                        next_occ = get_next_occurrence_weekly(
-                            4, event.start_time or "13:00")
-            except:
-                continue
-
-            if not next_occ:
-                continue
-
-            # Schedule reminders
-            if event.event_type == "fixed" and event.fixed_type == "jummah":
-                # Jummah: 1hr before only
-                for hours_before in [1]:
-                    fire_at = next_occ - timedelta(hours=hours_before)
-                    if fire_at > now:
-                        countdown = int((fire_at - now).total_seconds())
-                        send_event_reminder.apply_async(
-                            args=[str(event.id), hours_before, "hours"],
-                            countdown=countdown
-                        )
-            elif event.event_type == "fixed" and event.fixed_type in ("eid_fitr", "eid_adha"):
-                # Eid: 3 days, 1 day before
-                for days_before in [3, 1]:
-                    fire_at = next_occ - timedelta(days=days_before)
-                    if fire_at > now:
-                        countdown = int((fire_at - now).total_seconds())
-                        send_event_reminder.apply_async(
-                            args=[str(event.id), days_before, "days"],
-                            countdown=countdown
-                        )
-            else:
-                # User events: 1 day before, 2 hours before
-                for reminder in [(1, "days"), (2, "hours")]:
-                    amount, unit = reminder
-                    if unit == "days":
-                        fire_at = next_occ - timedelta(days=amount)
-                    else:
-                        fire_at = next_occ - timedelta(hours=amount)
-                    if fire_at > now:
-                        countdown = int((fire_at - now).total_seconds())
-                        send_event_reminder.apply_async(
-                            args=[str(event.id), amount, unit],
-                            countdown=countdown
-                        )
-
-        print(f"✅ Event reminders scheduled for {len(events)} events")
-    finally:
-        db.close()
-
-@celery.task
-def send_event_reminder(event_id: str, amount: int, unit: str):
-    """Send reminder for an event"""
-    from app.models.event import Event
-    db = SessionLocal()
-    try:
-        event = db.query(Event).filter(
-            Event.id == uuid.UUID(event_id)
-        ).first()
-        if not event:
-            return
-
-        # Get tokens
-        if event.user_id:
-            user = db.query(User).filter(
-                User.id == event.user_id,
-                User.fcm_token.isnot(None)
-            ).first()
-            tokens = [user.fcm_token] if user else []
-        else:
-            tokens = _get_tokens(db)
-
-        if not tokens:
-            return
-
-        if unit == "hours":
-            time_str = f"{amount} hour{'s' if amount > 1 else ''}"
-        else:
-            time_str = f"{amount} day{'s' if amount > 1 else ''}"
-
-        title = f"Rise365 — {event.name}"
-        body = f"{event.name} starts in {time_str}"
-
-        if amount == 2 and unit == "hours":
-            body = f"⏰ {event.name} starts in 2 hours — don't forget!"
-        elif amount == 1 and unit == "days":
-            body = f"📅 {event.name} is tomorrow!"
-        elif amount == 3 and unit == "days":
-            body = f"📌 {event.name} is in 3 days"
-        elif amount == 7 and unit == "days":
-            body = f"🌙 {event.name} is one week away — start preparing!"
-
-        count = send_multicast(tokens, title, body,
-                               {"type": "event", "event_id": event_id})
-        print(f"✅ Event reminder sent: {event.name} — {time_str} — {count} sent")
-    finally:
-        db.close()
-
-@celery.task
-def schedule_ramadan_reminders():
-    """Schedule Ramadan start and Taraweeh reminders"""
-    import asyncio
-    from app.services.islamic_calendar_service import get_ramadan_dates
-
-    loop = asyncio.new_event_loop()
-    ramadan_dates = loop.run_until_complete(get_ramadan_dates())
-    loop.close()
-
-    now = datetime.now()
-    today = now.date()
-
-    try:
-        ramadan_start = date.fromisoformat(ramadan_dates["ramadan_start"])
-    except:
-        return
-
-    day_before = ramadan_start - timedelta(days=1)
-
-    # Ramadan start reminders: 1 week, 3 days, 1 day before
-    for days_before in [7, 3, 1]:
-        fire_date = day_before - timedelta(days=days_before - 1)
-        fire_dt = datetime.combine(fire_date, datetime.min.time().replace(
-            hour=9, minute=0))
-        if fire_dt > now:
-            countdown = int((fire_dt - now).total_seconds())
-            send_ramadan_reminder.apply_async(
-                args=["ramadan_start", days_before],
-                countdown=countdown
-            )
-
-    # Taraweeh reminders: 3hr and 1hr before each night
-    if today <= day_before:
-        fire_at_3hr = datetime.combine(day_before, datetime.min.time()
-            .replace(hour=18, minute=30))
-        fire_at_1hr = datetime.combine(day_before, datetime.min.time()
-            .replace(hour=20, minute=30))
-
-        for fire_at, hours in [(fire_at_1hr, 1)]:
-            if fire_at > now:
-                countdown = int((fire_at - now).total_seconds())
-                send_taraweeh_reminder.apply_async(
-                    args=[hours],
-                    countdown=countdown
-                )
-
-    print("✅ Ramadan reminders scheduled")
-
-@celery.task
-def send_ramadan_reminder(reminder_type: str, days_before: int):
-    db = SessionLocal()
-    try:
-        tokens = _get_tokens(db)
-        if not tokens:
-            return
-
-        if reminder_type == "ramadan_start":
-            if days_before == 7:
-                title = "Rise365 — Ramadan is coming! 🌙"
-                body = "One week until Ramadan! Start preparing your heart and routine."
-            elif days_before == 3:
-                title = "Rise365 — Ramadan in 3 days! 🌙"
-                body = "3 days to go! Set your intentions and prepare for the blessed month."
-            else:
-                title = "Rise365 — Ramadan starts tomorrow! 🌙"
-                body = "Ramadan Mubarak! The blessed month begins tonight at Maghrib."
-
-        count = send_multicast(tokens, title, body,
-                               {"type": "event", "fixed_type": "ramadan_start"})
-        print(f"✅ Ramadan reminder sent: {count} notifications")
-    finally:
-        db.close()
-
-@celery.task
-def send_taraweeh_reminder(hours_before: int):
-    db = SessionLocal()
-    try:
-        tokens = _get_tokens(db)
-        if not tokens:
-            return
-
-        title = "Rise365 — Taraweeh tonight! 🤲"
-        if hours_before == 3:
-            body = "Taraweeh prayer starts in 3 hours. Don't miss the night prayer of Ramadan!"
-        else:
-            body = "Taraweeh begins in 1 hour! Get ready for your nightly worship."
-
-        count = send_multicast(tokens, title, body,
-                               {"type": "event", "fixed_type": "taraweeh"})
-        print(f"✅ Taraweeh reminder ({hours_before}hr): {count} sent")
-    finally:
-        db.close()
-
-# ── Monthly achievement level update ─────────────────────────────────────────
-
-@celery.task
-def update_monthly_achievements():
-    """Run on last day of month — update achievement levels for all users"""
-    from app.services.completion_service import update_monthly_achievement
-    from app.models.user import UserRole
-    db = SessionLocal()
-    try:
-        users = db.query(User).filter(
-            User.role == UserRole.user,
-            User.is_active == True,
-        ).all()
-        print(f"Updating achievements for {len(users)} users...")
-        for user in users:
-            try:
-                update_monthly_achievement(user, db)
-            except Exception as e:
-                print(f"❌ Error for {user.name}: {e}")
-        print("✅ Monthly achievements updated!")
-    finally:
-        db.close()
-
-@celery.task
-def update_weekly_achievements():
-    """Run every Monday at 4 AM — update achievement levels for all users"""
-    from app.services.completion_service import update_weekly_achievement
-    from app.models.user import UserRole
-    db = SessionLocal()
-    try:
-        users = db.query(User).filter(
-            User.role == UserRole.user,
-            User.is_active == True,
-        ).all()
-        print(f"Updating weekly achievements for {len(users)} users...")
-        for user in users:
-            try:
-                update_weekly_achievement(user, db)
-            except Exception as e:
-                print(f"❌ Error for {user.name}: {e}")
-        print("✅ Weekly achievements updated!")
     finally:
         db.close()
