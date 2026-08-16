@@ -6,7 +6,22 @@ PDF_DIR = os.path.join(
     os.path.dirname(__file__), "../../uploads/pdfs")
 
 def get_pdf_path(filename: str) -> str:
-    return os.path.join(PDF_DIR, filename)
+    """Get PDF path — download from R2 if not local"""
+    local_path = os.path.join(PDF_DIR, filename)
+    if os.path.exists(local_path):
+        return local_path
+    # Download from R2
+    try:
+        from app.services.r2_service import download_pdf
+        content = download_pdf(filename)
+        os.makedirs(PDF_DIR, exist_ok=True)
+        with open(local_path, 'wb') as f:
+            f.write(content)
+        print(f"✅ Downloaded from R2: {filename}")
+        return local_path
+    except Exception as e:
+        print(f"❌ R2 download failed: {e}")
+        raise FileNotFoundError(f"PDF not found: {filename}")
 
 def get_total_pages(filename: str) -> int:
     try:

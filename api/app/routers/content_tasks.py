@@ -97,11 +97,18 @@ async def create_content_task(
 
         if filename.endswith('.pdf'):
             # ── PDF task ──────────────────────────────────────────────
-            os.makedirs(PDF_DIR, exist_ok=True)
             saved_name = f"{uuid.uuid4()}_{file.filename}"
+            # Save locally for immediate use
+            os.makedirs(PDF_DIR, exist_ok=True)
             filepath = os.path.join(PDF_DIR, saved_name)
             with open(filepath, "wb") as f_out:
                 f_out.write(file_content)
+            # Also upload to R2 for production
+            try:
+                from app.services.r2_service import upload_pdf
+                upload_pdf(file_content, saved_name)
+            except Exception as e:
+                print(f"⚠️ R2 upload failed (continuing): {e}")
 
             total_pages = get_total_pages(saved_name)
             book = PdfBook(

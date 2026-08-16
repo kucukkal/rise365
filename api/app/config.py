@@ -22,6 +22,10 @@ class Settings(BaseSettings):
 
     # App
     APP_NAME: str = "Rise365"
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_ENDPOINT: str = ""
+    R2_BUCKET: str = "rise365-pdfs"
     ADMIN_EMAIL: str = "kucukkalmu@gmail.com"
     SENDGRID_API_KEY: str = ""
     ADMIN_USERNAME: str = "admin"
