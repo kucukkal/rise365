@@ -1717,7 +1717,7 @@ function handleCredentials() {
   if (!username || !password) { alert('Enter username and password'); return; }
   var btn = document.getElementById('login-btn');
   btn.disabled = true;
-  fetch('http://127.0.0.1:8000/api/v1/auth/admin/login?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password), {
+  fetch('https://rise365-production.up.railway.app/api/v1/auth/admin/login?username=' + encodeURIComponent(username) + '&password=' + encodeURIComponent(password), {
     method: 'POST', headers: {'Content-Type': 'application/json'}
   })
   .then(function(r){ return r.text().then(function(text) {
@@ -1741,7 +1741,7 @@ function handleOtp() {
   btn.disabled = true;
   var email = window._adminEmail || 'dev';
   console.log('Verifying OTP with email:', email);
-  fetch('http://127.0.0.1:8000/api/v1/auth/admin/verify?code=' + otp, {
+  fetch('https://rise365-production.up.railway.app/api/v1/auth/admin/verify?code=' + otp, {
     method: 'POST', headers: {'Content-Type': 'application/json'}
   })
   .then(function(r){ return r.text().then(function(text){
