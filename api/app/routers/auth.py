@@ -49,7 +49,7 @@ def send_otp_endpoint(request: SendOTPRequest, db: Session = Depends(get_db)):
             detail="Failed to send OTP"
         )
 
-    return {"message": "OTP sent successfully", "phone": phone}
+    return {"message": "OTP sent successfully", "phone": phone, "code_type": code_type}
 
 @router.post("/verify-otp")
 def verify_otp_endpoint(request: VerifyOTPRequest, db: Session = Depends(get_db)):
