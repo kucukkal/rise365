@@ -9,7 +9,18 @@ def init_firebase():
     global _initialized
     if _initialized:
         return
-    cred_path = settings.FIREBASE_CREDENTIALS_PATH
+    # Use base64 env var on Railway, fall back to file path locally
+    import os, base64, json, tempfile
+    firebase_b64 = os.getenv("FIREBASE_CREDENTIALS_BASE64", "")
+    if firebase_b64:
+        # Decode base64 and write to temp file
+        cred_json = base64.b64decode(firebase_b64).decode("utf-8")
+        tmp = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        tmp.write(cred_json)
+        tmp.close()
+        cred_path = tmp.name
+    else:
+        cred_path = settings.FIREBASE_CREDENTIALS_PATH
     if not cred_path or not os.path.exists(cred_path):
         print("⚠️  Firebase credentials not found — notifications disabled")
         return

@@ -19,6 +19,7 @@ class Settings(BaseSettings):
 
     # Firebase
     FIREBASE_CREDENTIALS_PATH: str = ""
+    FIREBASE_CREDENTIALS_BASE64: str = ""
 
     # App
     APP_NAME: str = "Rise365"
