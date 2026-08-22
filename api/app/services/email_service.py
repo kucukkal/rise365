@@ -2,9 +2,9 @@ import os
 import random
 import string
 import redis
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import urllib.request
+import urllib.error
+import json
 from app.config import settings
 
 # Redis for OTP storage
@@ -29,20 +29,14 @@ def verify_email_otp(email: str, code: str) -> bool:
     return False
 
 def send_otp_email(email: str, otp: str) -> bool:
-    gmail_user = os.getenv("GMAIL_USER", "")
-    gmail_password = os.getenv("GMAIL_APP_PASSWORD", "")
+    resend_key = os.getenv("RESEND_API_KEY", "")
 
-    # Dev mode — print to terminal if no Gmail configured
-    if not gmail_user or not gmail_password:
+    # Dev mode
+    if not resend_key:
         print(f"📧 [DEV] Admin OTP: {otp}")
         return True
 
     try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Rise365 Admin — Your OTP Code"
-        msg["From"] = f"Rise365 <{gmail_user}>"
-        msg["To"] = email
-
         html = f"""
         <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px">
           <div style="background:#1D9E75;border-radius:12px;padding:24px;text-align:center">
@@ -63,16 +57,27 @@ def send_otp_email(email: str, otp: str) -> bool:
         </div>
         """
 
-        msg.attach(MIMEText(html, "html"))
+        payload = json.dumps({
+            "from": "Rise365 <onboarding@resend.dev>",
+            "to": [email],
+            "subject": "Rise365 Admin — Your OTP Code",
+            "html": html,
+        }).encode("utf-8")
 
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(gmail_user, gmail_password)
-            server.sendmail(gmail_user, email, msg.as_string())
+        req = urllib.request.Request(
+            "https://api.resend.com/emails",
+            data=payload,
+            headers={
+                "Authorization": f"Bearer {resend_key}",
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
 
-        print(f"✅ OTP email sent to {email}")
-        return True
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read())
+            print(f"✅ OTP email sent via Resend: {result}")
+            return True
 
     except Exception as e:
         print(f"❌ Email error: {e}")
