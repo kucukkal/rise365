@@ -36,38 +36,47 @@ def send_otp_email(email: str, otp: str) -> bool:
         return True
 
     try:
-        import sendgrid
-        from sendgrid.helpers.mail import Mail
-
+        import requests
         key = settings.SENDGRID_API_KEY
-        print(f"📧 SendGrid key prefix: {key[:10]}... length: {len(key)}")
-        sg = sendgrid.SendGridAPIClient(api_key=key)
-        message = Mail(
-            from_email=os.getenv("SENDGRID_FROM_EMAIL", "kucukkalmu@gmail.com"),
-            to_emails=email,
-            subject="Rise365 Admin — Your OTP Code",
-            html_content=f"""
-            <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px">
-              <div style="background:#1D9E75;border-radius:12px;padding:24px;text-align:center">
-                <h2 style="color:white;margin:0">Rise365 Admin</h2>
-              </div>
-              <div style="padding:24px;background:#f8f9fa;border-radius:12px;margin-top:12px">
-                <p style="color:#333;font-size:15px">Your admin verification code:</p>
-                <div style="background:white;border-radius:8px;padding:20px;text-align:center;
-                     font-size:36px;font-weight:bold;letter-spacing:12px;color:#1D9E75;
-                     border:2px solid #1D9E75;margin:16px 0">
-                  {otp}
-                </div>
-                <p style="color:#666;font-size:13px">
-                  This code expires in 10 minutes.<br>
-                  If you didn't request this, ignore this email.
-                </p>
-              </div>
-            </div>
-            """
+        from_email = os.getenv("SENDGRID_FROM_EMAIL", "kucukkalmu@gmail.com")
+        print(f"📧 Sending email via SendGrid REST API from {from_email}")
+        
+        response = requests.post(
+            "https://api.sendgrid.com/v3/mail/send",
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "personalizations": [{"to": [{"email": email}]}],
+                "from": {"email": from_email, "name": "Rise365 Admin"},
+                "subject": "Rise365 Admin - Your OTP Code",
+                "content": [{
+                    "type": "text/html",
+                    "value": f"""
+                    <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px">
+                      <div style="background:#1D9E75;border-radius:12px;padding:24px;text-align:center">
+                        <h2 style="color:white;margin:0">Rise365 Admin</h2>
+                      </div>
+                      <div style="padding:24px;background:#f8f9fa;border-radius:12px;margin-top:12px">
+                        <p style="color:#333;font-size:15px">Your admin verification code:</p>
+                        <div style="background:white;border-radius:8px;padding:20px;text-align:center;
+                             font-size:36px;font-weight:bold;letter-spacing:12px;color:#1D9E75;
+                             border:2px solid #1D9E75;margin:16px 0">
+                          {otp}
+                        </div>
+                        <p style="color:#666;font-size:13px">
+                          This code expires in 10 minutes.<br>
+                          If you did not request this, ignore this email.
+                        </p>
+                      </div>
+                    </div>
+                    """
+                }]
+            }
         )
-        sg.send(message)
-        return True
+        print(f"📧 SendGrid response: {response.status_code} {response.text}")
+        return response.status_code == 202
     except Exception as e:
         print(f"Email error: {e}")
         return False
