@@ -1,3 +1,4 @@
+import os
 import random
 import string
 import redis
@@ -40,7 +41,7 @@ def send_otp_email(email: str, otp: str) -> bool:
 
         sg = sendgrid.SendGridAPIClient(api_key=settings.SENDGRID_API_KEY)
         message = Mail(
-            from_email="noreply@rise365.app",
+            from_email=os.getenv("SENDGRID_FROM_EMAIL", "kucukkalmu@gmail.com"),
             to_emails=email,
             subject="Rise365 Admin — Your OTP Code",
             html_content=f"""
