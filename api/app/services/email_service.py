@@ -39,7 +39,9 @@ def send_otp_email(email: str, otp: str) -> bool:
         import sendgrid
         from sendgrid.helpers.mail import Mail
 
-        sg = sendgrid.SendGridAPIClient(api_key=settings.SENDGRID_API_KEY)
+        key = settings.SENDGRID_API_KEY
+        print(f"📧 SendGrid key prefix: {key[:10]}... length: {len(key)}")
+        sg = sendgrid.SendGridAPIClient(api_key=key)
         message = Mail(
             from_email=os.getenv("SENDGRID_FROM_EMAIL", "kucukkalmu@gmail.com"),
             to_emails=email,
