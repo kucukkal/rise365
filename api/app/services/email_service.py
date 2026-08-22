@@ -65,7 +65,9 @@ def send_otp_email(email: str, otp: str) -> bool:
 
         msg.attach(MIMEText(html, "html"))
 
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
             server.login(gmail_user, gmail_password)
             server.sendmail(gmail_user, email, msg.as_string())
 
