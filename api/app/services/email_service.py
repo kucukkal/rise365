@@ -2,7 +2,9 @@ import os
 import random
 import string
 import redis
-import json
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from app.config import settings
 
 # Redis for OTP storage
@@ -17,9 +19,6 @@ def store_otp(email: str, otp: str):
     _redis.setex(key, OTP_EXPIRY, otp)
 
 def verify_email_otp(email: str, code: str) -> bool:
-    # Dev mode — no real SendGrid key
-    if not settings.SENDGRID_API_KEY or settings.SENDGRID_API_KEY.startswith("your_"):
-        return code == "123456"
     key = f"admin_otp:{email}"
     stored = _redis.get(key)
     if not stored:
@@ -30,53 +29,49 @@ def verify_email_otp(email: str, code: str) -> bool:
     return False
 
 def send_otp_email(email: str, otp: str) -> bool:
-    # Dev mode — print to terminal
-    if not settings.SENDGRID_API_KEY:
-        print(f"📧 [DEV] OTP for {email}: {otp}")
+    gmail_user = os.getenv("GMAIL_USER", "")
+    gmail_password = os.getenv("GMAIL_APP_PASSWORD", "")
+
+    # Dev mode — print to terminal if no Gmail configured
+    if not gmail_user or not gmail_password:
+        print(f"📧 [DEV] Admin OTP: {otp}")
         return True
 
     try:
-        import requests
-        key = settings.SENDGRID_API_KEY
-        from_email = os.getenv("SENDGRID_FROM_EMAIL", "kucukkalmu@gmail.com")
-        print(f"📧 Sending email via SendGrid REST API from {from_email}")
-        
-        response = requests.post(
-            "https://api.sendgrid.com/v3/mail/send",
-            headers={
-                "Authorization": f"Bearer {key}",
-                "Content-Type": "application/json"
-            },
-            json={
-                "personalizations": [{"to": [{"email": email}]}],
-                "from": {"email": from_email, "name": "Rise365 Admin"},
-                "subject": "Rise365 Admin - Your OTP Code",
-                "content": [{
-                    "type": "text/html",
-                    "value": f"""
-                    <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px">
-                      <div style="background:#1D9E75;border-radius:12px;padding:24px;text-align:center">
-                        <h2 style="color:white;margin:0">Rise365 Admin</h2>
-                      </div>
-                      <div style="padding:24px;background:#f8f9fa;border-radius:12px;margin-top:12px">
-                        <p style="color:#333;font-size:15px">Your admin verification code:</p>
-                        <div style="background:white;border-radius:8px;padding:20px;text-align:center;
-                             font-size:36px;font-weight:bold;letter-spacing:12px;color:#1D9E75;
-                             border:2px solid #1D9E75;margin:16px 0">
-                          {otp}
-                        </div>
-                        <p style="color:#666;font-size:13px">
-                          This code expires in 10 minutes.<br>
-                          If you did not request this, ignore this email.
-                        </p>
-                      </div>
-                    </div>
-                    """
-                }]
-            }
-        )
-        print(f"📧 SendGrid response: {response.status_code} {response.text}")
-        return response.status_code == 202
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Rise365 Admin — Your OTP Code"
+        msg["From"] = f"Rise365 <{gmail_user}>"
+        msg["To"] = email
+
+        html = f"""
+        <div style="font-family:sans-serif;max-width:400px;margin:0 auto;padding:20px">
+          <div style="background:#1D9E75;border-radius:12px;padding:24px;text-align:center">
+            <h2 style="color:white;margin:0">Rise365 Admin</h2>
+          </div>
+          <div style="padding:24px;background:#f8f9fa;border-radius:12px;margin-top:12px">
+            <p style="color:#333;font-size:15px">Your admin verification code:</p>
+            <div style="background:white;border-radius:8px;padding:20px;text-align:center;
+                 font-size:36px;font-weight:bold;letter-spacing:12px;color:#1D9E75;
+                 border:2px solid #1D9E75;margin:16px 0">
+              {otp}
+            </div>
+            <p style="color:#666;font-size:13px">
+              This code expires in 10 minutes.<br>
+              If you didn't request this, ignore this email.
+            </p>
+          </div>
+        </div>
+        """
+
+        msg.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(gmail_user, gmail_password)
+            server.sendmail(gmail_user, email, msg.as_string())
+
+        print(f"✅ OTP email sent to {email}")
+        return True
+
     except Exception as e:
-        print(f"Email error: {e}")
+        print(f"❌ Email error: {e}")
         return False
