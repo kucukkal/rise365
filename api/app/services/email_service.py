@@ -30,6 +30,7 @@ def verify_email_otp(email: str, code: str) -> bool:
 
 def send_otp_email(email: str, otp: str) -> bool:
     resend_key = os.getenv("RESEND_API_KEY", "")
+    print(f"📧 Resend key: {resend_key[:10] if resend_key else 'EMPTY'}... len={len(resend_key)}")
 
     # Dev mode
     if not resend_key:
