@@ -6,10 +6,13 @@ def get_twilio_client():
 
 def send_otp(phone: str) -> bool:
     try:
+        print(f"Twilio SID prefix: {settings.TWILIO_ACCOUNT_SID[:10]}")
+        print(f"Verify SID prefix: {settings.TWILIO_VERIFY_SERVICE_SID[:10]}")
         client = get_twilio_client()
         verification = client.verify.v2.services(
             settings.TWILIO_VERIFY_SERVICE_SID
         ).verifications.create(to=phone, channel="sms")
+        print(f"Verification status: {verification.status}")
         return verification.status == "pending"
     except Exception as e:
         print(f"Twilio error: {e}")
