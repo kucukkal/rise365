@@ -80,6 +80,10 @@ def send_otp_email(email: str, otp: str) -> bool:
             print(f"✅ OTP email sent via Resend: {result}")
             return True
 
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode()
+        print(f"❌ Email error: {e} — Body: {error_body}")
+        return False
     except Exception as e:
         print(f"❌ Email error: {e}")
         return False
