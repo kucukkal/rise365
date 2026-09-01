@@ -46,10 +46,16 @@ def admin_portal():
 def privacy():
     from fastapi.responses import FileResponse
     import os
-    return FileResponse(
+    # Try multiple paths for local and Railway
+    possible_paths = [
         os.path.join(os.path.dirname(__file__), "../static/privacy.html"),
-        media_type="text/html"
-    )
+        "/app/static/privacy.html",
+        "static/privacy.html",
+    ]
+    for path in possible_paths:
+        if os.path.exists(path):
+            return FileResponse(path, media_type="text/html")
+    return {"error": "Privacy policy not found"}
 
 @app.get("/")
 def root():
