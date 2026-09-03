@@ -1670,9 +1670,9 @@ async function loadContentTasks() {
           <div class="row-title">${t.title}</div>
           <div class="row-sub">
             ${t.content_type === 'pdf'
-              ? `${t.pdf_title || ''} · ${t.total_pages || 0} pages`
+              ? `${t.pdf_title || ''} · ${t.total_pages || 0} pages · 📄 ${t.filename || ''}`
               : t.content_type === 'excel'
-                ? `${t.total_rows || 0} rows · rotates daily`
+                ? `${t.total_rows || 0} rows · rotates daily · 📊 ${t.filename || ''}`
                 : 'Fixed content'}
           </div>
         </div>

@@ -204,7 +204,6 @@ def list_content_tasks(
 
         if t.info_content and t.info_content.startswith("pdf:"):
             content_type = "pdf"
-            # Get PDF info
             try:
                 book_id = t.info_content.split(":")[1]
                 book = db.query(PdfBook).filter(
@@ -214,6 +213,7 @@ def list_content_tasks(
                     extra = {
                         "pdf_title": book.title,
                         "total_pages": book.total_pages,
+                        "filename": book.filename,
                     }
             except:
                 pass
@@ -224,7 +224,10 @@ def list_content_tasks(
                 ExcelTaskContent.task_id == t.id,
                 ExcelTaskContent.is_active == True,
             ).count()
-            extra = {"total_rows": row_count}
+            extra = {
+                "total_rows": row_count,
+                "filename": t.info_content,
+            }
 
         result.append({
             "id": str(t.id),
