@@ -92,8 +92,22 @@ async def get_prayer_times(
             "isha": "9:30 PM", "qiyam": "11:00 PM",
         }
 
+    # Filter prayers based on rank
+    # Rank 0: obligatory only
+    # Rank 1-2: obligatory only (voluntary shown but not required)
+    # Rank 3: obligatory + Duha
+    # Rank 4+: all 8 prayers
+    if level_order >= 4:
+        active_prayers = PRAYER_ORDER
+    elif level_order == 3:
+        active_prayers = OBLIGATORY_PRAYERS + ["duha"]
+    else:
+        active_prayers = OBLIGATORY_PRAYERS
+
+    active_order = [p for p in PRAYER_ORDER if p in active_prayers]
+
     prayers = []
-    for name in PRAYER_ORDER:
+    for name in active_order:
         evrad_name = f"{name}_evrad"
         evrad_required = level_order >= 1
         evrad_completed = evrad_name in completed_names if evrad_required else False
