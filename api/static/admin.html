@@ -983,7 +983,8 @@ function renderLevels() {
 function populateLevelDropdowns() {
   const opts = `<option value="">All levels</option>` +
     levelsData.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
-  document.getElementById('task-level').innerHTML = opts;
+  const taskLevel = document.getElementById('task-level');
+  if (taskLevel) taskLevel.innerHTML = opts;
   document.getElementById('tasks-filter').innerHTML = opts;
 }
 
@@ -1686,7 +1687,8 @@ async function loadContentTasks() {
           <span class="badge" style="${poolColors[t.pool_type]||poolColors.myseed}">
             ${poolLabels[t.pool_type]||'🌱 MySeed'}
           </span>
-          <button class="btn btn-danger" onclick="deleteContentTask('${t.id}','${t.title}')"
+          <button class="btn btn-danger" onclick="deleteContentTask('${t.id}', this.dataset.title)"
+                  data-title="${t.title.replace(/'/g, '&apos;')}"
                   style="padding:5px 12px;font-size:12px">
             <i class="ti ti-trash"></i>Remove
           </button>
@@ -1696,8 +1698,9 @@ async function loadContentTasks() {
 }
 
 async function deleteContentTask(id, title) {
+  const taskTitle = title || 'this task';
   openModal('Remove task',
-    `Remove "${title}"? Users will no longer see this task.`,
+    `Remove "${taskTitle}"? Users will no longer see this task.`,
     async () => {
       try {
         await api('DELETE', `/content-tasks/${id}`);
