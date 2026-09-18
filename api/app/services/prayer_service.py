@@ -2,6 +2,8 @@ import httpx
 from datetime import datetime, timedelta
 
 PRAYER_ORDER = ["fajr", "duha", "dhuhr", "asr", "maghrib", "awwabin", "isha", "qiyam"]
+OBLIGATORY_PRAYERS = ["fajr", "dhuhr", "asr", "maghrib", "isha"]
+VOLUNTARY_PRAYERS = ["duha", "awwabin", "qiyam"]
 EVRAD_POINTS = 20
 
 DISPLAY_NAMES = {
