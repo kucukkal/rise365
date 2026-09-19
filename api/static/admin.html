@@ -492,6 +492,13 @@ nav{padding:14px 12px;flex:1;overflow-y:auto}
           </div>
         </div>
 
+        <!-- Pages per day -->
+        <div class="form-group" id="pages-per-day-group" style="display:none">
+          <label>Pages per day <span style="color:var(--text3);font-weight:400">— how many pages shown each day (default: 1)</span></label>
+          <input id="pdf-pages-per-day" type="number" value="1" min="1" max="50"
+            style="width:120px">
+        </div>
+
         <!-- File attachment -->
         <div style="margin-bottom:14px">
           <label>Content file <span style="color:var(--text3);font-weight:400">— optional. Upload PDF or Excel</span></label>
@@ -1531,11 +1538,13 @@ function detectFileType() {
   const name = fi.files[0].name.toLowerCase();
   hint.style.display = 'block';
   if (name.endsWith('.pdf')) {
-    hint.innerHTML = '<span style="color:var(--primary)"><i class="ti ti-file-type-pdf"></i> PDF detected — rotating pages daily. Add level assignments below.</span>';
+    hint.innerHTML = '<span style="color:var(--primary)"><i class="ti ti-file-type-pdf"></i> PDF detected — rotating pages daily.</span>';
     pdfSection.style.display = 'block';
+    document.getElementById('pages-per-day-group').style.display = 'block';
   } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
     hint.innerHTML = '<span style="color:#0C447C"><i class="ti ti-file-spreadsheet"></i> Excel detected — Col A (content) + Col B (information), rotates daily by row.</span>';
     pdfSection.style.display = 'none';
+    document.getElementById('pages-per-day-group').style.display = 'none';
   }
 }
 
@@ -1585,22 +1594,20 @@ async function createContentTask() {
     const fileInput = document.getElementById('content-file-input');
     if (fileInput.files[0]) {
       formData.append('file', fileInput.files[0]);
-      // Add PDF level assignments if PDF
       const fname = fileInput.files[0].name.toLowerCase();
       if (fname.endsWith('.pdf')) {
-        const rows = document.querySelectorAll('#pdf-level-rows > div');
-        const assignments = [];
-        rows.forEach(row => {
-          const sel = row.querySelector('select');
-          const inp = row.querySelector('input[type=number]');
-          if (sel && inp) assignments.push({
-            level_order: parseInt(sel.value),
-            pages_per_day: parseInt(inp.value) || 1,
-          });
-        });
-        if (assignments.length > 0) {
-          formData.append('assignments_json', JSON.stringify(assignments));
-        }
+        // Use simple pages per day field
+        const pagesPerDay = parseInt(
+          document.getElementById('pdf-pages-per-day')?.value) || 1;
+        // Create assignment for all levels with same pages per day
+        const assignments = [
+          { level_order: 0, pages_per_day: pagesPerDay },
+          { level_order: 1, pages_per_day: pagesPerDay },
+          { level_order: 2, pages_per_day: pagesPerDay },
+          { level_order: 3, pages_per_day: pagesPerDay },
+          { level_order: 4, pages_per_day: pagesPerDay },
+        ];
+        formData.append('assignments_json', JSON.stringify(assignments));
       }
     }
 
