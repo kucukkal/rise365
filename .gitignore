@@ -224,3 +224,6 @@ api/*.json
 api/__pycache__/
 api/.venv/
 api/uploads/
+
+# Flutter source must be tracked
+!app/lib/
