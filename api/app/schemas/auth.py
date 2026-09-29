@@ -13,6 +13,8 @@ class RegisterRequest(BaseModel):
     phone: str
     name: str
     program_level_id: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str

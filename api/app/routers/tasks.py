@@ -12,6 +12,14 @@ import uuid
 
 router = APIRouter()
 
+def _content_last():
+    """0 for plain tasks, 1 for PDF/Excel tasks, so plain tasks come first."""
+    from sqlalchemy import case, or_
+    return case(
+        (or_(Task.info_content.like("pdf:%"), Task.info_content.like("excel:%")), 1),
+        else_=0,
+    )
+
 def get_period_range(frequency: str, use_4am: bool = True):
     now = datetime.utcnow()
     cutoff_hour = 4 if use_4am else 0
@@ -79,7 +87,7 @@ def get_tasks(
             Task.pool_type.in_(["myseed", "both"])
         )
 
-    tasks = query.all()
+    tasks = query.order_by(_content_last(), Task.sort_order, Task.created_at).all()
     result = []
 
     for task in tasks:
@@ -205,6 +213,7 @@ def create_task(
         info_type=request.info_type,
         info_content=request.info_content,
         pool_type=request.pool_type or "myseed",
+        sort_order=getattr(request, "sort_order", None) or 100,
         program_level_id=uuid.UUID(request.program_level_id) if request.program_level_id else None
     )
     db.add(task)

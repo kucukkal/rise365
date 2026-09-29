@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.signup_code import SignupCode
@@ -17,12 +18,33 @@ def format_phone(phone: str) -> str:
         digits = '1' + digits
     return f'+{digits}'
 
+
+def _personal_level_name(db, PL, first_name: str, last_name: str, raw_phone: str) -> str:
+    """MyRise_AhmetYilmaz; if taken, MyRise_AhmetYilmaz_5750 (last 4 of phone)."""
+    words = f"{first_name} {last_name}".split()
+    joined = "".join(w[:1].upper() + w[1:] for w in words)
+    joined = re.sub(r"[^\w]", "", joined).replace("_", "") or "User"
+    base = f"MyRise_{joined}"[:80]
+
+    def taken(name):
+        return db.query(PL).filter(PL.name == name).first() is not None
+
+    if not taken(base):
+        return base
+    last4 = re.sub(r"\D", "", raw_phone or "")[-4:]
+    candidate = f"{base}_{last4}" if last4 else f"{base}_2"
+    n = 2
+    while taken(candidate):
+        candidate = f"{base}_{n}"
+        n += 1
+    return candidate
+
 @router.post("/send-otp")
 def send_otp_endpoint(request: SendOTPRequest, db: Session = Depends(get_db)):
     # Validate signup code
     code_type = "custom"
     code = db.query(SignupCode).filter(
-        SignupCode.code == request.signup_code
+        func.lower(SignupCode.code) == request.signup_code.strip().lower()
     ).first()
 
     if code:
@@ -82,9 +104,18 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
     assigned_level_id = request.program_level_id
     code_type = "custom"
 
+    # First / last name (older app versions only send "name")
+    first_name = (request.first_name or "").strip()
+    last_name = (request.last_name or "").strip()
+    if not first_name:
+        parts = (request.name or "").strip().split(" ", 1)
+        first_name = parts[0]
+        last_name = last_name or (parts[1].strip() if len(parts) > 1 else "")
+    full_name = f"{first_name} {last_name}".strip() or (request.name or "").strip()
+
     # Check if program_level_id is actually a signup code
     signup_code = db.query(SignupCode).filter(
-        SignupCode.code == request.program_level_id
+        func.lower(SignupCode.code) == request.program_level_id.strip().lower()
     ).first()
 
     if signup_code:
@@ -103,7 +134,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         elif code_type == "myrise":
             # Create personal MyRise level for this user
             personal_level = PL(
-                name="MyRise",
+                name=_personal_level_name(db, PL, first_name, last_name, request.phone),
                 description="Personal MyBuild level",
                 order=0,
                 level_type="myrise",
@@ -129,7 +160,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
                     PLExist.id == _uuid_exist.UUID(str(existing.program_level_id))
                 ).first()
                 if lv:
-                    exist_level_name = lv.name
+                    exist_level_name = "MyRise" if lv.level_type == "myrise" else lv.name
             except:
                 pass
         return TokenResponse(
@@ -143,7 +174,9 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 
     # Create new user
     user = User(
-        name=request.name,
+        name=full_name,
+        first_name=first_name or None,
+        last_name=last_name or None,
         phone=phone,
         program_level_id=assigned_level_id,
         total_points=0,
@@ -151,8 +184,9 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
     )
     db.add(user)
 
-    # Increment signup code usage
-    # (find the code used during send-otp — for now just create user)
+    # Count this signup against the code's usage limit
+    if signup_code:
+        signup_code.current_uses = (signup_code.current_uses or 0) + 1
     db.commit()
     db.refresh(user)
 
@@ -176,7 +210,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
                     ProgramLevel.name == level_id_str
                 ).first()
             if lv:
-                level_name = lv.name
+                level_name = "MyRise" if lv.level_type == "myrise" else lv.name
                 print(f"✅ Level found: {lv.name} (type: {lv.level_type})")
             else:
                 print(f"❌ Level not found for: {level_id_str}")
@@ -202,7 +236,10 @@ def create_signup_code(
     max_uses: int = 1,
     db: Session = Depends(get_db)
 ):
-    existing = db.query(SignupCode).filter(SignupCode.code == code.upper()).first()
+    code = code.strip()
+    existing = db.query(SignupCode).filter(
+        func.lower(SignupCode.code) == code.lower()
+    ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Code already exists")
 
@@ -221,9 +258,11 @@ def get_public_levels(db: Session = Depends(get_db)):
     """Public endpoint — Flutter app uses this on register screen"""
     from app.models.program_level import ProgramLevel
     levels = db.query(ProgramLevel).filter(
-        ProgramLevel.is_active == True
+        ProgramLevel.is_active == True,
+        ProgramLevel.level_type.notin_(["seed", "myrise"]),
     ).order_by(ProgramLevel.order).all()
-    return [{"id": str(l.id), "name": l.name, "description": l.description}
+    return [{"id": str(l.id), "name": l.name, "description": l.description,
+             "level_type": l.level_type or "custom"}
             for l in levels]
 
 @router.post("/bootstrap")

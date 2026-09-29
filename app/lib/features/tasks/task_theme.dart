@@ -21,7 +21,7 @@ class TaskTheme {
     'quran':     TaskTheme(Color(0xFF1B7A3E), Color(0xFFE9F4EC)), // green
     'dhikr':     TaskTheme(Color(0xFF1E6FD9), Color(0xFFE7F0FC)), // blue
     'dua':       TaskTheme(Color(0xFFE2700A), Color(0xFFFDEEDF)), // orange
-    'seerah':    TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)), // navy
+    'seerah':    TaskTheme(Color(0xFF6E3AA8), Color(0xFFF1EAF8)), // navy
     'hadith':    TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)), // navy
     'prophet':   TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)), // navy
   };

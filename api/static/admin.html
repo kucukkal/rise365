@@ -404,6 +404,10 @@ nav{padding:14px 12px;flex:1;overflow-y:auto}
               <option value="video">Video URL</option>
             </select>
           </div>
+          <div>
+            <label>Display order <span style="color:var(--text3);font-weight:400">— 1 = top</span></label>
+            <input id="task-order" type="number" value="1" min="1" max="999">
+          </div>
         </div>
         <div id="info-content-wrap" class="form-group" style="display:none">
           <label id="info-content-label">Info content</label>
@@ -490,6 +494,13 @@ nav{padding:14px 12px;flex:1;overflow-y:auto}
               <option value="">All levels</option>
             </select>
           </div>
+        </div>
+
+        <!-- Display order -->
+        <div class="form-group">
+          <label>Display order <span style="color:var(--text3);font-weight:400">— position in the user's task list (1 = top)</span></label>
+          <input id="pdf-task-order" type="number" value="1" min="1" max="999"
+            style="width:120px">
         </div>
 
         <!-- Pages per day -->
@@ -1021,6 +1032,7 @@ async function createTask() {
     info_content: document.getElementById('task-info-content').value.trim() || null,
     program_level_id: levelId || null,
     pool_type: poolType,
+    sort_order: parseInt(document.getElementById('task-order').value) || 100,
   };
   try {
     await api('POST', '/tasks/admin/create', payload);
@@ -1070,6 +1082,11 @@ function renderTasks(tasks) {
     return !ic.startsWith('pdf:') && !ic.startsWith('excel:');
   });
   document.getElementById('tasks-count').textContent = `All tasks (${t.length})`;
+  const taskOrderInput = document.getElementById('task-order');
+  if (taskOrderInput) {
+    const used = t.map(x => x.sort_order ?? 100).filter(n => n < 100);
+    taskOrderInput.value = used.length ? Math.max(...used) + 1 : 1;
+  }
   if (!t.length) {
     document.getElementById('tasks-list').innerHTML =
       '<div class="empty"><i class="ti ti-checkbox"></i><p>No tasks yet. Create your first task above.</p></div>';
@@ -1086,6 +1103,7 @@ function renderTasks(tasks) {
           ${task.description ? `<div class="row-sub">${task.description}</div>` : ''}
         </div>
         <div class="tags">
+          <span class="badge badge-gray" title="Display order">#${task.sort_order ?? 100}</span>
           <span class="badge badge-amber">+${task.points} pts</span>
           <span class="badge badge-gray">${task.frequency}</span>
           <span class="badge badge-blue">${levelName}</span>
@@ -1154,7 +1172,7 @@ function renderUsers() {
           <div class="avatar">${u.name[0].toUpperCase()}</div>
           <div>
             <div class="row-title" style="display:flex;align-items:center;gap:6px">
-              ${u.name}
+              ${u.display_name || u.name}
               ${isAdmin ? '<span class="badge badge-blue" style="font-size:10px">Admin</span>' : ''}
             </div>
             <div class="row-sub">${u.phone}</div>
@@ -1588,6 +1606,7 @@ async function createContentTask() {
     formData.append('frequency', document.getElementById('pdf-task-freq').value);
     formData.append('points', document.getElementById('pdf-task-points').value);
     formData.append('pool_type', document.getElementById('pdf-task-pool').value);
+    formData.append('sort_order', document.getElementById('pdf-task-order').value || '100');
     const levelId = document.getElementById('pdf-task-level').value;
     if (levelId) formData.append('program_level_id', levelId);
 
@@ -1646,6 +1665,11 @@ async function loadContentTasks() {
     const tasks = allTasks.filter(t => t.content_type === 'pdf' || t.content_type === 'excel');
     document.getElementById('pdftasks-count').textContent =
       `PDF & Excel tasks (${tasks.length})`;
+    const orderInput = document.getElementById('pdf-task-order');
+    if (orderInput) {
+      const used = tasks.map(t => t.sort_order ?? 100).filter(n => n < 100);
+      orderInput.value = used.length ? Math.max(...used) + 1 : 1;
+    }
     if (!tasks.length) {
       document.getElementById('pdftasks-list').innerHTML =
         '<div class="empty"><i class="ti ti-file-text"></i><p>No tasks yet</p></div>';
@@ -1685,6 +1709,7 @@ async function loadContentTasks() {
           </div>
         </div>
         <div class="tags">
+          <span class="badge badge-gray" title="Display order">#${t.sort_order ?? 100}</span>
           <span class="badge" style="${typeColors[t.content_type]||typeColors.fixed}">
             <i class="ti ${typeIcons[t.content_type]||typeIcons.fixed}"></i>
             ${t.content_type}
@@ -1718,6 +1743,15 @@ async function deleteContentTask(id, title) {
 }
 
 // Load content tasks when section is shown
+
+async function setTaskOrder(id, input) {
+  const val = parseInt(input.value);
+  if (isNaN(val)) return;
+  try {
+    await api('PUT', `/content-tasks/${id}/order?sort_order=${val}`);
+    await loadContentTasks();
+  } catch(e) { alert('Failed to save order: ' + e.message); }
+}
 
 
 function handleCredentials() {

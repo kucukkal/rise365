@@ -23,6 +23,9 @@ def get_levels(
     for l in levels:
         level_type = getattr(l, "level_type", "custom") or "custom"
         is_system = level_type in ("seed", "myrise")
+        # Personal MyBuild levels (named after each user) aren't listed here
+        if level_type == "myrise" and l.description == "Personal MyBuild level":
+            continue
         # Only show one MyRise entry
         if level_type == "myrise":
             if seen_myrise:
@@ -82,9 +85,21 @@ def get_all_users(
     admin: User = Depends(get_admin_user)
 ):
     users = db.query(User).order_by(User.created_at.desc()).all()
+    from collections import Counter
+    name_counts = Counter((u.name or "").strip().lower() for u in users)
+
+    def display_name(u):
+        n = u.name or ""
+        if name_counts[n.strip().lower()] > 1 and u.phone:
+            return f"{n} (…{u.phone[-4:]})"
+        return n
+
     return [{
         "id": str(u.id),
         "name": u.name,
+        "display_name": display_name(u),
+        "first_name": getattr(u, "first_name", None),
+        "last_name": getattr(u, "last_name", None),
         "phone": u.phone,
         "program_level_id": u.program_level_id,
         "achievement_level": u.achievement_level,
@@ -131,7 +146,8 @@ def get_all_tasks(
     admin: User = Depends(get_admin_user)
 ):
     from app.models.task import Task
-    tasks = db.query(Task).filter(Task.is_active == True).all()
+    tasks = db.query(Task).filter(Task.is_active == True).order_by(
+        Task.sort_order, Task.created_at).all()
     return [{
         "id": str(t.id),
         "title": t.title,
@@ -141,6 +157,8 @@ def get_all_tasks(
         "info_type": t.info_type.value if hasattr(t.info_type, 'value') else t.info_type,
         "info_content": t.info_content,
         "program_level_id": str(t.program_level_id) if t.program_level_id else None,
+        "pool_type": getattr(t, "pool_type", "myseed") or "myseed",
+        "sort_order": getattr(t, "sort_order", 100),
     } for t in tasks]
 
 @router.delete("/tasks/{task_id}")

@@ -27,11 +27,15 @@ class AuthApi {
     required String phone,
     required String name,
     required String programLevelId,
+    String? firstName,
+    String? lastName,
   }) async {
     final response = await ApiService.dio.post('/auth/register', data: {
       'phone': phone,
       'name': name,
       'program_level_id': programLevelId,
+      if (firstName != null) 'first_name': firstName,
+      if (lastName != null) 'last_name': lastName,
     });
     if (response.data['access_token'] != null) {
       await ApiService.saveToken(response.data['access_token']);

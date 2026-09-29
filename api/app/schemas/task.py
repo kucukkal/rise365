@@ -32,6 +32,7 @@ class TaskCompleteRequest(BaseModel):
     task_id: str
 
 class CreateTaskRequest(BaseModel):
+    sort_order: int = 100
     title: str
     description: Optional[str] = None
     frequency: TaskFrequency

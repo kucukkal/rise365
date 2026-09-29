@@ -71,8 +71,11 @@ def get_my_tasks(
                 "pages_per_day": ut.pages_per_day,
                 "frequency": ut.frequency,
                 "points": task.points,
+                "sort_order": getattr(task, "sort_order", 100),
+                "has_content": (task.info_content or "").startswith(("pdf:", "excel:")),
                 "is_completed": False,
             })
+    result.sort(key=lambda r: (r["has_content"], r["sort_order"]))
     return result
 
 @router.get("/available-tasks")

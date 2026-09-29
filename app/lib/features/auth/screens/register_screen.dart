@@ -25,7 +25,11 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _nameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+
+  String get _fullName =>
+      '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'.trim();
   String? _selectedLevelId;
   bool _isLoading = false;
   bool _levelsLoading = true;
@@ -65,7 +69,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     super.dispose();
   }
 
@@ -82,9 +87,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   void _register() async {
-    if (_nameController.text.trim().isEmpty) {
+    if (_firstNameController.text.trim().isEmpty ||
+        _lastNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your name')));
+        const SnackBar(content: Text('Please enter your first and last name')));
       return;
     }
 
@@ -101,11 +107,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
             (_levels.isNotEmpty ? _levels.first['id'] : 'level_1');
       }
 
-      print('📱 Registering with: phone=${widget.phone}, name=${_nameController.text.trim()}, levelId=$levelId, codeType=${widget.codeType}, signupCode=${widget.signupCode}');
+      print('📱 Registering with: phone=${widget.phone}, name=$_fullName, levelId=$levelId, codeType=${widget.codeType}, signupCode=${widget.signupCode}');
 
       final response = await AuthApi.register(
         phone: widget.phone,
-        name: _nameController.text.trim(),
+        name: _fullName,
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
         programLevelId: levelId,
       );
       
@@ -198,19 +206,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 32),
 
-                    // Name field
-                    const Text('Full Name',
+                    // First name
+                    const Text('First Name',
                         style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: AppColors.textPrimary)),
                     const SizedBox(height: 8),
                     TextField(
-                      controller: _nameController,
-                      textCapitalization:
-                          TextCapitalization.words,
+                      controller: _firstNameController,
+                      textCapitalization: TextCapitalization.words,
+                      textInputAction: TextInputAction.next,
                       decoration: const InputDecoration(
-                        hintText: 'Enter your full name',
+                        hintText: 'Enter your first name',
+                        prefixIcon: Icon(Icons.person_outline,
+                            color: AppColors.textHint),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Last name
+                    const Text('Last Name',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _lastNameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter your last name',
                         prefixIcon: Icon(Icons.person_outline,
                             color: AppColors.textHint),
                       ),

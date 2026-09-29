@@ -226,6 +226,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _codeController,
+                  autocorrect: false,
+                  enableSuggestions: false,
                   decoration: const InputDecoration(
                     hintText: 'Enter your invite code',
                     prefixIcon: Icon(Icons.key_outlined,

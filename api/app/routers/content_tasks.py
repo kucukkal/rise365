@@ -59,6 +59,7 @@ async def create_content_task(
     frequency: str = Form("daily"),
     points: int = Form(10),
     pool_type: str = Form("myseed"),
+    sort_order: int = Form(100),
     program_level_id: Optional[str] = Form(None),
     assignments_json: Optional[str] = Form(None),
     file: Optional[UploadFile] = File(None),
@@ -83,6 +84,7 @@ async def create_content_task(
         frequency=freq_map.get(frequency, TaskFrequency.daily),
         points=points,
         pool_type=pool_type,
+        sort_order=sort_order,
         program_level_id=program_level_id or None,
         info_type=TaskInfoType.text,
         info_content=None,
@@ -196,7 +198,8 @@ def list_content_tasks(
     admin: User = Depends(get_admin_user)
 ):
     """List all tasks with their content type"""
-    tasks = db.query(Task).filter(Task.is_active == True).all()
+    tasks = db.query(Task).filter(Task.is_active == True).order_by(
+        Task.sort_order, Task.created_at).all()
     result = []
     for t in tasks:
         content_type = "fixed"
@@ -236,6 +239,7 @@ def list_content_tasks(
                 if hasattr(t.frequency, "value") else t.frequency,
             "points": t.points,
             "pool_type": getattr(t, "pool_type", "myseed"),
+            "sort_order": getattr(t, "sort_order", 100),
             "content_type": content_type,
             **extra,
         })
@@ -340,3 +344,20 @@ def get_today_content(
             "info_type": task.info_type.value
                 if hasattr(task.info_type, "value") else task.info_type,
         }
+
+
+# ── Admin: set display order ──────────────────────────────────────────────────
+
+@router.put("/{task_id}/order")
+def set_task_order(
+    task_id: str,
+    sort_order: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user)
+):
+    task = db.query(Task).filter(Task.id == uuid.UUID(task_id)).first()
+    if not task:
+        raise HTTPException(404, "Task not found")
+    task.sort_order = sort_order
+    db.commit()
+    return {"message": "Order updated", "sort_order": sort_order}

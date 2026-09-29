@@ -20,7 +20,7 @@ def get_profile(
                 ProgramLevel.id == _uuid.UUID(str(current_user.program_level_id))
             ).first()
             if lv:
-                level_name = lv.name
+                level_name = "MyRise" if lv.level_type == "myrise" else lv.name
         except:
             level_name = str(current_user.program_level_id)
 
@@ -42,6 +42,8 @@ def get_profile(
     return {
         "id": str(current_user.id),
         "name": current_user.name,
+        "first_name": getattr(current_user, "first_name", None),
+        "last_name": getattr(current_user, "last_name", None),
         "phone": current_user.phone,
         "program_level_id": current_user.program_level_id,
         "program_level": level_name or "Level 1",

@@ -19,6 +19,7 @@ class TaskInfoType(str, enum.Enum):
 class Task(Base):
     __tablename__ = "tasks"
 
+    sort_order = Column(Integer, nullable=False, default=100, server_default="100")
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
