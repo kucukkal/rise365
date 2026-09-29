@@ -68,7 +68,7 @@ async def get_prayer_times(
         completed_names = set()
 
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
             response = await client.get(
                 "https://api.aladhan.com/v1/timingsByCity",
                 params={"city": city, "country": country, "method": 2},

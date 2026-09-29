@@ -7,7 +7,7 @@ async def get_eid_dates(year: int = None) -> dict:
     if year is None:
         year = datetime.now().year
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
             # Get Hijri calendar for current year
             response = await client.get(
                 f"https://api.aladhan.com/v1/islamicYearFromGregorianYear/{year}",
@@ -47,7 +47,7 @@ async def get_ramadan_dates(year: int = None) -> dict:
     if year is None:
         year = datetime.now().year
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
             response = await client.get(
                 f"https://api.aladhan.com/v1/islamicYearFromGregorianYear/{year}",
                 timeout=10.0
@@ -77,7 +77,7 @@ async def get_ramadan_dates(year: int = None) -> dict:
 async def get_friday_zuhr_time(city: str = "Herndon", country: str = "US") -> str:
     """Get Zuhr prayer time for use as Jummah time"""
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
             response = await client.get(
                 "https://api.aladhan.com/v1/timingsByCity",
                 params={"city": city, "country": country, "method": 2},

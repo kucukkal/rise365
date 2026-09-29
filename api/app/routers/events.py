@@ -194,7 +194,7 @@ async def get_today_events(
             # Get Maghrib time
             try:
                 import httpx
-                async with httpx.AsyncClient() as client:
+                async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
                     r = await client.get(
                         "https://api.aladhan.com/v1/timingsByCity",
                         params={"city": city, "country": country, "method": 2},
@@ -244,7 +244,7 @@ async def get_today_events(
             # Get Isha time
             try:
                 import httpx
-                async with httpx.AsyncClient() as client:
+                async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
                     r = await client.get(
                         "https://api.aladhan.com/v1/timingsByCity",
                         params={"city": city, "country": country, "method": 2},
