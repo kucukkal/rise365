@@ -512,6 +512,7 @@ class _TaskCardState extends State<_TaskCard> {
   }
 
   Widget _buildInfoContent() {
+    final theme = TaskTheme.forTitle(widget.task.title);
     final content = widget.task.infoContent ?? '';
 
     // PDF task
@@ -519,6 +520,9 @@ class _TaskCardState extends State<_TaskCard> {
       return PdfPageViewer(
         taskId: widget.task.id,
         taskTitle: widget.task.title,
+        accentColor: theme.accent,
+        tintColor: theme.tint,
+        inkColor: theme.ink,
       );
     }
 
@@ -527,6 +531,9 @@ class _TaskCardState extends State<_TaskCard> {
       return ExcelContentViewer(
         taskId: widget.task.id,
         taskTitle: widget.task.title,
+        accentColor: theme.accent,
+        tintColor: theme.tint,
+        inkColor: theme.ink,
       );
     }
 

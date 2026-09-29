@@ -8,10 +8,19 @@ class PdfPageViewer extends StatefulWidget {
   final String taskId;
   final String taskTitle;
 
+  /// Optional colors so the viewer matches its task bar.
+  /// Leave null to keep the default app colors.
+  final Color? accentColor; // borders, icons, arrows
+  final Color? tintColor;   // panel background
+  final Color? inkColor;    // title text
+
   const PdfPageViewer({
     super.key,
     required this.taskId,
     required this.taskTitle,
+    this.accentColor,
+    this.tintColor,
+    this.inkColor,
   });
 
   @override
@@ -19,6 +28,15 @@ class PdfPageViewer extends StatefulWidget {
 }
 
 class _PdfPageViewerState extends State<PdfPageViewer> {
+  Color get _accent => widget.accentColor ?? AppColors.primary;
+  Color get _ink => widget.inkColor ?? AppColors.primary;
+  Color get _panelBg => widget.tintColor ?? AppColors.background;
+  Color get _panelBorder =>
+      widget.accentColor?.withOpacity(0.35) ?? AppColors.border;
+  Color get _headerBg =>
+      widget.accentColor?.withOpacity(0.14) ??
+      AppColors.primary.withOpacity(0.06);
+
   List<dynamic> _images = [];
   bool _isLoading = true;
   String? _error;
@@ -65,9 +83,9 @@ class _PdfPageViewerState extends State<PdfPageViewer> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: _panelBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: _panelBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -77,15 +95,15 @@ class _PdfPageViewerState extends State<PdfPageViewer> {
             padding: const EdgeInsets.symmetric(
                 horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.06),
+              color: _headerBg,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
               ),
             ),
             child: Row(children: [
-              const Icon(Icons.menu_book_rounded,
-                  color: AppColors.primary, size: 18),
+              Icon(Icons.menu_book_rounded,
+                  color: _accent, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -93,10 +111,10 @@ class _PdfPageViewerState extends State<PdfPageViewer> {
                   children: [
                     Text(
                       _pdfTitle.isEmpty ? widget.taskTitle : _pdfTitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primary),
+                          color: _ink),
                     ),
                     if (_todayPages.isNotEmpty)
                       Text('Today: pages $_todayPages',
@@ -114,7 +132,7 @@ class _PdfPageViewerState extends State<PdfPageViewer> {
                       : null,
                   child: Icon(Icons.chevron_left,
                       color: _currentPage > 0
-                          ? AppColors.primary
+                          ? _accent
                           : AppColors.textHint,
                       size: 24),
                 ),
@@ -128,7 +146,7 @@ class _PdfPageViewerState extends State<PdfPageViewer> {
                       : null,
                   child: Icon(Icons.chevron_right,
                       color: _currentPage < _images.length - 1
-                          ? AppColors.primary
+                          ? _accent
                           : AppColors.textHint,
                       size: 24),
                 ),
@@ -144,11 +162,11 @@ class _PdfPageViewerState extends State<PdfPageViewer> {
 
           // Content
           if (_isLoading)
-            const Padding(
-              padding: EdgeInsets.all(24),
+            Padding(
+              padding: const EdgeInsets.all(24),
               child: Center(
                 child: CircularProgressIndicator(
-                    color: AppColors.primary, strokeWidth: 2)),
+                    color: _accent, strokeWidth: 2)),
             )
           else if (_error != null)
             Padding(

@@ -6,10 +6,19 @@ class ExcelContentViewer extends StatefulWidget {
   final String taskId;
   final String taskTitle;
 
+  /// Optional colors so the viewer matches its task bar.
+  /// Leave null to keep the default app colors.
+  final Color? accentColor; // borders, icons, arrows
+  final Color? tintColor;   // panel background
+  final Color? inkColor;    // title text
+
   const ExcelContentViewer({
     super.key,
     required this.taskId,
     required this.taskTitle,
+    this.accentColor,
+    this.tintColor,
+    this.inkColor,
   });
 
   @override
@@ -17,6 +26,15 @@ class ExcelContentViewer extends StatefulWidget {
 }
 
 class _ExcelContentViewerState extends State<ExcelContentViewer> {
+  Color get _accent => widget.accentColor ?? AppColors.primary;
+  Color get _ink => widget.inkColor ?? AppColors.primary;
+  Color get _panelBg => widget.tintColor ?? AppColors.background;
+  Color get _panelBorder =>
+      widget.accentColor?.withOpacity(0.35) ?? AppColors.border;
+  Color get _headerBg =>
+      widget.accentColor?.withOpacity(0.14) ??
+      AppColors.primary.withOpacity(0.06);
+
   String? _content;
   String? _information;
   int _rowNumber = 1;
@@ -54,10 +72,10 @@ class _ExcelContentViewerState extends State<ExcelContentViewer> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
+      return Padding(
+        padding: const EdgeInsets.all(24),
         child: Center(child: CircularProgressIndicator(
-            color: AppColors.primary, strokeWidth: 2)),
+            color: _accent, strokeWidth: 2)),
       );
     }
 
@@ -72,9 +90,9 @@ class _ExcelContentViewerState extends State<ExcelContentViewer> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: _panelBg,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: _panelBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,22 +102,22 @@ class _ExcelContentViewerState extends State<ExcelContentViewer> {
             padding: const EdgeInsets.symmetric(
                 horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.06),
+              color: _headerBg,
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(12),
                 topRight: Radius.circular(12),
               ),
             ),
             child: Row(children: [
-              const Icon(Icons.format_list_numbered_rounded,
-                  color: AppColors.primary, size: 18),
+              Icon(Icons.format_list_numbered_rounded,
+                  color: _accent, size: 18),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(widget.taskTitle,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primary)),
+                        color: _ink)),
               ),
               Text('Day $_rowNumber of $_totalRows',
                   style: const TextStyle(

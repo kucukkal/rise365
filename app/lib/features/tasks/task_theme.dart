@@ -1,22 +1,33 @@
 import 'package:flutter/material.dart';
 
+/// Background colors for task bars.
 /// Content tasks use the color of the PDF page they open;
 /// every other task gets a soft color from a shared palette.
+/// accent = border / checkbox ring, tint = bar background.
 class TaskTheme {
-  final Color accent; // border / checkbox ring
-  final Color tint;   // bar background
+  final Color accent;
+  final Color tint;
   const TaskTheme(this.accent, this.tint);
 
+  /// Darker shade of the accent, readable as text on the tint.
+  Color get ink {
+    final hsl = HSLColor.fromColor(accent);
+    return hsl.withLightness((hsl.lightness * 0.7).clamp(0.0, 1.0)).toColor();
+  }
+
+  // Content tasks: first keyword found in the title wins.
   static const _byKeyword = <String, TaskTheme>{
-    'knowledge': TaskTheme(Color(0xFFD9A900), Color(0xFFFFF6D8)),
-    'quran':     TaskTheme(Color(0xFF1B7A3E), Color(0xFFE9F4EC)),
-    'dhikr':     TaskTheme(Color(0xFF1E6FD9), Color(0xFFE7F0FC)),
-    'dua':       TaskTheme(Color(0xFFE2700A), Color(0xFFFDEEDF)),
-    'seerah':    TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)),
-    'hadith':    TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)),
-    'prophet':   TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)),
+    'knowledge': TaskTheme(Color(0xFFD9A900), Color(0xFFFFF6D8)), // gold
+    'quran':     TaskTheme(Color(0xFF1B7A3E), Color(0xFFE9F4EC)), // green
+    'dhikr':     TaskTheme(Color(0xFF1E6FD9), Color(0xFFE7F0FC)), // blue
+    'dua':       TaskTheme(Color(0xFFE2700A), Color(0xFFFDEEDF)), // orange
+    'seerah':    TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)), // navy
+    'hadith':    TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)), // navy
+    'prophet':   TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)), // navy
   };
 
+  // Other tasks: colors chosen to sit well beside the ones above
+  // without repeating them.
   static const _palette = <TaskTheme>[
     TaskTheme(Color(0xFF0F8A8A), Color(0xFFE3F4F3)), // teal
     TaskTheme(Color(0xFF7B4FA0), Color(0xFFF2EBF8)), // plum
@@ -30,6 +41,7 @@ class TaskTheme {
     for (final entry in _byKeyword.entries) {
       if (t.contains(entry.key)) return entry.value;
     }
+    // Same title always gets the same color, on every device and launch.
     var hash = 0;
     for (final c in t.codeUnits) {
       hash = (hash * 31 + c) & 0x7fffffff;

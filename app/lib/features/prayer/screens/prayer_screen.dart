@@ -4,6 +4,7 @@ import '../../../core/services/prayer_time_service.dart';
 import '../../../core/services/prayers_api.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../shared/models/prayer_model.dart';
+import '../prayer_theme.dart';
 
 class PrayerScreen extends StatefulWidget {
   final UserModel user;
@@ -186,14 +187,45 @@ class _PrayerScreenState extends State<PrayerScreen> {
     );
   }
 
+  /// Minutes since midnight for a time like "5:12 AM" or "17:05".
+  int? _minutesOf(String time) {
+    final m = RegExp(r'(\d{1,2}):(\d{2})\s*([AaPp][Mm])?').firstMatch(time);
+    if (m == null) return null;
+    var h = int.parse(m.group(1)!);
+    final min = int.parse(m.group(2)!);
+    final ampm = m.group(3)?.toLowerCase();
+    if (ampm == 'pm' && h != 12) h += 12;
+    if (ampm == 'am' && h == 12) h = 0;
+    return h * 60 + min;
+  }
+
+  /// Theme of the most recent daily prayer whose time has started.
+  /// Before Fajr it's still night, so Isha's colors are used.
+  PrayerTheme? _currentSky() {
+    final now = DateTime.now();
+    final nowMin = now.hour * 60 + now.minute;
+    String? current;
+    for (final name in PrayerTheme.dailyOrder) {
+      final match = _prayers.where((p) => p.name == name);
+      if (match.isEmpty) continue;
+      final start = _minutesOf(match.first.time);
+      if (start == null) return null;
+      if (nowMin >= start) current = name;
+    }
+    return PrayerTheme.forName(current ?? 'isha');
+  }
+
   Widget _buildProgressCard() {
     final total = _prayers.length;
     final progress = total > 0 ? _totalCompleted / total : 0.0;
+    final sky = _currentSky();
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primary, AppColors.primaryDark],
+        gradient: LinearGradient(
+          colors: sky == null
+              ? const [AppColors.primary, AppColors.primaryDark]
+              : [sky.accent, sky.ink],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -273,28 +305,23 @@ class _PrayerCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSpecial = prayer.name == 'duha' ||
-        prayer.name == 'awwabin' ||
-        prayer.name == 'qiyam';
-
     return ValueListenableBuilder<String?>(
       valueListenable: prayerTimeService.activePrayerNotifier,
       builder: (context, activePrayer, _) {
         final isActive = activePrayer == prayer.name &&
             !prayer.isCompleted;
+        final theme = PrayerTheme.forName(prayer.name);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: prayer.isCompleted
-            ? AppColors.primary.withOpacity(0.03)
-            : isActive
-                ? const Color(0xFFEF9F27).withOpacity(0.08)
-                : AppColors.surface,
+        color: isActive
+            ? Color.alphaBlend(theme.accent.withOpacity(0.10), theme.tint)
+            : theme.tint,
         borderRadius: BorderRadius.circular(14),
         boxShadow: isActive ? [
           BoxShadow(
-            color: const Color(0xFFEF9F27).withOpacity(0.4),
+            color: theme.accent.withOpacity(0.4),
             blurRadius: 12,
             spreadRadius: 2,
           )
@@ -303,10 +330,11 @@ class _PrayerCard extends StatelessWidget {
           color: prayer.isCompleted
               ? AppColors.primary.withOpacity(0.3)
               : isActive
-                  ? const Color(0xFFEF9F27).withOpacity(0.8)
+                  ? theme.accent.withOpacity(0.9)
                   : prayer.windowExpired
-                  ? AppColors.error.withOpacity(0.2)
-                  : AppColors.border,
+                  ? AppColors.error.withOpacity(0.3)
+                  : theme.accent.withOpacity(0.35),
+          width: isActive ? 1.5 : 1.2,
         ),
       ),
       child: Column(children: [
@@ -318,20 +346,12 @@ class _PrayerCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: prayer.isCompleted
                   ? AppColors.primary.withOpacity(0.1)
-                  : isSpecial
-                      ? AppColors.accent.withOpacity(0.08)
-                      : AppColors.background,
+                  : theme.accent.withOpacity(0.14),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
-              prayer.name == 'qiyam'
-                  ? Icons.nightlight_round
-                  : prayer.name == 'duha'
-                      ? Icons.wb_sunny_outlined
-                      : Icons.nights_stay_outlined,
-              color: prayer.isCompleted
-                  ? AppColors.primary
-                  : isSpecial ? AppColors.accent : AppColors.textHint,
+              theme.icon,
+              color: prayer.isCompleted ? AppColors.primary : theme.accent,
               size: 22,
             ),
           ),
@@ -343,7 +363,7 @@ class _PrayerCard extends StatelessWidget {
                     ? AppColors.primary
                     : prayer.windowExpired
                         ? AppColors.textHint
-                        : AppColors.textPrimary,
+                        : theme.ink,
                 decoration: prayer.windowExpired && !prayer.isCompleted
                     ? TextDecoration.lineThrough
                     : null,
@@ -400,7 +420,9 @@ class _PrayerCard extends StatelessWidget {
                   border: Border.all(
                     color: prayer.isCompleted
                         ? AppColors.primary
-                        : AppColors.border,
+                        : prayer.isLocked
+                            ? AppColors.border
+                            : theme.accent.withOpacity(0.6),
                     width: 2,
                   ),
                 ),
