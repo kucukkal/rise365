@@ -295,11 +295,11 @@ def calculate_total_points(user: User, db: Session) -> int:
     return earned["total"]
 
 def get_achievement_level(pct: float) -> str:
-    if pct >= 96: return "Diamond"
+    if pct >= 91: return "Diamond"
     if pct >= 81: return "Sapphire"
-    if pct >= 61: return "Gold"
-    if pct >= 41: return "Silver"
-    if pct >= 21: return "Bronze"
+    if pct >= 71: return "Gold"
+    if pct >= 60: return "Silver"
+    if pct >= 50: return "Bronze"
     return "Starter"
 
 def update_weekly_achievement(user: User, db: Session):
