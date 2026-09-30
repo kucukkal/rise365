@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Background colors for task bars.
+/// Background colors for task bars (and events).
 /// Content tasks use the color of the PDF page they open;
 /// every other task gets a soft color from a shared palette.
 /// accent = border / checkbox ring, tint = bar background.
@@ -21,13 +21,21 @@ class TaskTheme {
     'quran':     TaskTheme(Color(0xFF1B7A3E), Color(0xFFE9F4EC)), // green
     'dhikr':     TaskTheme(Color(0xFF1E6FD9), Color(0xFFE7F0FC)), // blue
     'dua':       TaskTheme(Color(0xFFE2700A), Color(0xFFFDEEDF)), // orange
-    'seerah':    TaskTheme(Color(0xFF6E3AA8), Color(0xFFF1EAF8)), // navy
+    'seerah':    TaskTheme(Color(0xFF6E3AA8), Color(0xFFF1EAF8)), // purple
     'hadith':    TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)), // navy
     'prophet':   TaskTheme(Color(0xFF1A2B6B), Color(0xFFEBEEF7)), // navy
   };
 
-  // Other tasks: colors chosen to sit well beside the ones above
-  // without repeating them.
+  /// The daily list's color order: green, navy, gold, purple, orange, blue.
+  /// Used for weekly/monthly tasks and events, by position.
+  static const _sequenceKeys = [
+    'quran', 'hadith', 'knowledge', 'seerah', 'dua', 'dhikr',
+  ];
+
+  static TaskTheme sequence(int index) =>
+      _byKeyword[_sequenceKeys[index.abs() % _sequenceKeys.length]]!;
+
+  // Other tasks: colors chosen to sit well beside the ones above.
   static const _palette = <TaskTheme>[
     TaskTheme(Color(0xFF0F8A8A), Color(0xFFE3F4F3)), // teal
     TaskTheme(Color(0xFF7B4FA0), Color(0xFFF2EBF8)), // plum

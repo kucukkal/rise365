@@ -260,6 +260,14 @@ class _TasksScreenState extends State<TasksScreen>
   }
 
   Widget _buildTaskList(List<TaskModel> tasks) {
+    // Daily: color follows the content (Quran green, Dua orange...).
+    // Weekly/Monthly: same six colors in the same order, by list position.
+    // Position comes from the admin's display order, so a task keeps its
+    // color when it's checked off.
+    TaskTheme themeFor(TaskModel t) => t.frequency == TaskFrequency.daily
+        ? TaskTheme.forTitle(t.title)
+        : TaskTheme.sequence(tasks.indexOf(t));
+
     final incomplete = tasks.where((t) => !t.isCompleted).toList();
     final completed = tasks.where((t) => t.isCompleted).toList();
 
@@ -298,7 +306,10 @@ class _TasksScreenState extends State<TasksScreen>
                 color: AppColors.textPrimary),
             const SizedBox(height: 8),
             ...incomplete.map((t) =>
-                _TaskCard(task: t, onToggle: () => _toggleTask(t))),
+                _TaskCard(
+                    task: t,
+                    theme: themeFor(t),
+                    onToggle: () => _toggleTask(t))),
             const SizedBox(height: 16),
           ],
           if (completed.isNotEmpty) ...[
@@ -308,7 +319,10 @@ class _TasksScreenState extends State<TasksScreen>
                 color: AppColors.primary),
             const SizedBox(height: 8),
             ...completed.map((t) =>
-                _TaskCard(task: t, onToggle: () => _toggleTask(t))),
+                _TaskCard(
+                    task: t,
+                    theme: themeFor(t),
+                    onToggle: () => _toggleTask(t))),
           ],
         ],
       ),
@@ -383,7 +397,8 @@ class _SectionHeader extends StatelessWidget {
 class _TaskCard extends StatefulWidget {
   final TaskModel task;
   final VoidCallback onToggle;
-  const _TaskCard({required this.task, required this.onToggle});
+  final TaskTheme? theme;
+  const _TaskCard({required this.task, required this.onToggle, this.theme});
 
   @override
   State<_TaskCard> createState() => _TaskCardState();
@@ -400,7 +415,7 @@ class _TaskCardState extends State<_TaskCard> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = TaskTheme.forTitle(widget.task.title);
+    final theme = widget.theme ?? TaskTheme.forTitle(widget.task.title);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -512,7 +527,7 @@ class _TaskCardState extends State<_TaskCard> {
   }
 
   Widget _buildInfoContent() {
-    final theme = TaskTheme.forTitle(widget.task.title);
+    final theme = widget.theme ?? TaskTheme.forTitle(widget.task.title);
     final content = widget.task.infoContent ?? '';
 
     // PDF task

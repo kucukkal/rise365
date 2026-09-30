@@ -132,39 +132,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Progress card
+          // Progress card — same green as the avatar, white text
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Achievement Progress',
                   style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary)),
+                      color: Colors.white)),
               const SizedBox(height: 14),
               Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(level, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: color)),
+                Text(level, style: const TextStyle(fontSize: 13,
+                    fontWeight: FontWeight.w600, color: Colors.white)),
                 Text(_nextLevel(level),
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary)),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.8))),
               ]),
               const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: _progressToNext(user.completionRate),
-                  backgroundColor: AppColors.border,
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  backgroundColor: Colors.white.withOpacity(0.25),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
                   minHeight: 8,
                 ),
               ),
               const SizedBox(height: 8),
               Text('${user.completionRate.toInt()}% completion rate',
-                  style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                  style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.85))),
             ]),
           ),
           const SizedBox(height: 12),

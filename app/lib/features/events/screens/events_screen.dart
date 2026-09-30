@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/api_service.dart';
 import '../../../shared/models/user_model.dart';
+import '../../tasks/task_theme.dart';
 
 class EventsScreen extends StatefulWidget {
   final UserModel user;
@@ -12,6 +13,18 @@ class EventsScreen extends StatefulWidget {
 }
 
 class _EventsScreenState extends State<EventsScreen> {
+  /// Same six colors as the task list, assigned by position.
+  /// Keyed by event id so an event has one color in both lists.
+  TaskTheme _eventTheme(Map<String, dynamic> event) {
+    final ids = <String>[];
+    for (final ev in [..._myEvents, ..._todayEvents]) {
+      final id = (ev['id'] ?? ev['name']).toString();
+      if (!ids.contains(id)) ids.add(id);
+    }
+    final idx = ids.indexOf((event['id'] ?? event['name']).toString());
+    return TaskTheme.sequence(idx < 0 ? 0 : idx);
+  }
+
   List<dynamic> _todayEvents = [];
   List<dynamic> _myEvents = [];
   Map<String, dynamic>? _ramadanBanner;
@@ -613,6 +626,7 @@ class _EventsScreenState extends State<EventsScreen> {
                       const SizedBox(height: 10),
                       ..._todayEvents.map((e) => _EventCard(
                             event: e,
+                            theme: _eventTheme(e),
                             onToggle: () => _toggleEvent(e),
                             showCheckbox: true,
                           )),
@@ -659,6 +673,7 @@ class _EventsScreenState extends State<EventsScreen> {
                     else
                       ..._myEvents.map((e) => _EventCard(
                             event: e,
+                            theme: _eventTheme(e),
                             onDelete: () => _deleteEvent(e),
                             showSchedule: true,
                           )),
@@ -676,9 +691,11 @@ class _EventCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final bool showCheckbox;
   final bool showSchedule;
+  final TaskTheme? theme;
 
   const _EventCard({
     required this.event,
+    this.theme,
     this.onToggle,
     this.onDelete,
     this.showCheckbox = false,
@@ -733,16 +750,20 @@ class _EventCard extends StatelessWidget {
     Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: isCompleted
-            ? AppColors.primary.withOpacity(0.04)
-            : AppColors.surface,
+        color: theme?.tint ??
+            (isCompleted
+                ? AppColors.primary.withOpacity(0.04)
+                : AppColors.surface),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isFixed
-              ? AppColors.accent.withOpacity(0.4)
-              : isCompleted
-                  ? AppColors.primary.withOpacity(0.3)
-                  : AppColors.border,
+          color: isCompleted
+              ? AppColors.primary.withOpacity(0.3)
+              : theme != null
+                  ? theme!.accent.withOpacity(0.45)
+                  : isFixed
+                      ? AppColors.accent.withOpacity(0.4)
+                      : AppColors.border,
+          width: theme != null ? 1.2 : 1,
         ),
       ),
       child: ListTile(
@@ -751,9 +772,11 @@ class _EventCard extends StatelessWidget {
         leading: Container(
           width: 44, height: 44,
           decoration: BoxDecoration(
-            color: isFixed
-                ? AppColors.accent.withOpacity(0.1)
-                : AppColors.primary.withOpacity(0.08),
+            color: theme != null
+                ? theme!.accent.withOpacity(0.14)
+                : isFixed
+                    ? AppColors.accent.withOpacity(0.1)
+                    : AppColors.primary.withOpacity(0.08),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
@@ -762,7 +785,8 @@ class _EventCard extends StatelessWidget {
                 : (event['fixed_type']?.toString().contains('eid') == true)
                     ? Icons.star_rounded
                     : Icons.event_rounded,
-            color: isFixed ? AppColors.accent : AppColors.primary,
+            color: theme?.accent ??
+                (isFixed ? AppColors.accent : AppColors.primary),
             size: 22,
           ),
         ),
@@ -815,7 +839,8 @@ class _EventCard extends StatelessWidget {
                       ? AppColors.primary : Colors.transparent,
                   border: Border.all(
                     color: isCompleted
-                        ? AppColors.primary : AppColors.border,
+                        ? AppColors.primary
+                        : theme?.accent.withOpacity(0.6) ?? AppColors.border,
                     width: 2,
                   ),
                 ),
