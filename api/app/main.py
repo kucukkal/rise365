@@ -42,6 +42,10 @@ if os.path.exists(static_path):
 def admin_portal():
     return FileResponse(os.path.join(static_path, "admin.html"))
 
+@app.get("/support")
+def support():
+    return FileResponse(os.path.join(static_path, "support.html"), media_type="text/html")
+
 @app.get("/privacy")
 def privacy():
     from fastapi.responses import FileResponse
