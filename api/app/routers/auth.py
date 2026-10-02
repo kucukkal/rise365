@@ -6,6 +6,8 @@ from app.models.user import User, UserRole
 from app.models.signup_code import SignupCode
 from app.schemas.auth import SendOTPRequest, VerifyOTPRequest, RegisterRequest, TokenResponse
 from app.core.security import create_access_token
+from app.core.dependencies import get_admin_user
+import os, hmac, hashlib, time, base64, secrets
 from app.services.twilio_service import send_otp, verify_otp
 from app.config import settings
 import re
@@ -17,6 +19,47 @@ def format_phone(phone: str) -> str:
     if not digits.startswith('1') and len(digits) == 10:
         digits = '1' + digits
     return f'+{digits}'
+
+
+# ── Security helpers ─────────────────────────────────────────────────────────
+
+def _on_railway() -> bool:
+    return any(os.getenv(k) for k in (
+        "RAILWAY_ENVIRONMENT_NAME", "RAILWAY_ENVIRONMENT", "RAILWAY_PROJECT_ID"))
+
+def _twilio_ready() -> bool:
+    sid = getattr(settings, "TWILIO_ACCOUNT_SID", "") or ""
+    return bool(sid) and sid != "your_twilio_account_sid"
+
+def _demo_phones() -> set:
+    raw = os.getenv("DEMO_OTP_PHONES", "")
+    return {format_phone(p) for p in raw.split(",") if p.strip()}
+
+def _demo_code() -> str:
+    return os.getenv("DEMO_OTP_CODE", "123456").strip()
+
+def _uses_fixed_code(phone: str) -> bool:
+    """Fixed code only on your Mac (no Twilio) or for allow-listed demo/test numbers."""
+    return (not _on_railway() and not _twilio_ready()) or phone in _demo_phones()
+
+_VERIFY_SECRET = (getattr(settings, "SECRET_KEY", None) or os.getenv("SECRET_KEY")
+                  or secrets.token_hex(32)).encode()
+_VERIFY_TTL = 15 * 60  # seconds
+
+def _make_verification_token(phone: str) -> str:
+    exp = str(int(time.time()) + _VERIFY_TTL)
+    payload = f"{phone}|{exp}"
+    sig = hmac.new(_VERIFY_SECRET, payload.encode(), hashlib.sha256).hexdigest()
+    return base64.urlsafe_b64encode(f"{payload}|{sig}".encode()).decode()
+
+def _check_verification_token(token: str, phone: str) -> bool:
+    try:
+        raw = base64.urlsafe_b64decode(token.encode()).decode()
+        p, exp, sig = raw.rsplit("|", 2)
+        good = hmac.new(_VERIFY_SECRET, f"{p}|{exp}".encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(sig, good) and p == phone and int(exp) >= time.time()
+    except Exception:
+        return False
 
 
 def _personal_level_name(db, PL, first_name: str, last_name: str, raw_phone: str) -> str:
@@ -60,9 +103,18 @@ def send_otp_endpoint(request: SendOTPRequest, db: Session = Depends(get_db)):
 
     phone = format_phone(request.phone)
 
-    # For development — skip Twilio if not configured
-    if settings.TWILIO_ACCOUNT_SID == "your_twilio_account_sid":
-        return {"message": "OTP sent (dev mode)", "phone": phone, "dev_code": "123456", "code_type": code_type}
+    # Fixed code: your Mac, or allow-listed demo/test numbers (e.g. App Review)
+    if _uses_fixed_code(phone):
+        resp = {"message": "OTP sent", "phone": phone, "code_type": code_type}
+        if not _on_railway():
+            resp["dev_code"] = _demo_code()
+        return resp
+
+    if not _twilio_ready():
+        raise HTTPException(
+            status_code=503,
+            detail="SMS verification is not available yet. Please try again later."
+        )
 
     success = send_otp(phone)
     if not success:
@@ -77,14 +129,18 @@ def send_otp_endpoint(request: SendOTPRequest, db: Session = Depends(get_db)):
 def verify_otp_endpoint(request: VerifyOTPRequest, db: Session = Depends(get_db)):
     phone = format_phone(request.phone)
 
-    # Dev mode bypass
-    if settings.TWILIO_ACCOUNT_SID == "your_twilio_account_sid":
-        if request.code != "123456":
+    if _uses_fixed_code(phone):
+        if not hmac.compare_digest(request.code.strip(), _demo_code()):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid OTP (dev mode: use 123456)"
+                detail="Invalid or expired OTP"
             )
-        return {"message": "OTP verified", "phone": phone, "verified": True}
+        return {"message": "OTP verified", "phone": phone, "verified": True,
+                "verification_token": _make_verification_token(phone)}
+
+    if not _twilio_ready():
+        raise HTTPException(status_code=503,
+                            detail="SMS verification is not available yet.")
 
     verified = verify_otp(phone, request.code)
     if not verified:
@@ -93,10 +149,18 @@ def verify_otp_endpoint(request: VerifyOTPRequest, db: Session = Depends(get_db)
             detail="Invalid or expired OTP"
         )
 
-    return {"message": "OTP verified", "phone": phone, "verified": True}
+    return {"message": "OTP verified", "phone": phone, "verified": True,
+            "verification_token": _make_verification_token(phone)}
 
 @router.post("/register", response_model=TokenResponse)
 def register(request: RegisterRequest, db: Session = Depends(get_db)):
+    # The phone must have just been verified with a code
+    if not _check_verification_token(request.verification_token or "",
+                                     format_phone(request.phone)):
+        raise HTTPException(
+            status_code=401,
+            detail="Phone number not verified. Please request a new code."
+        )
     from app.models.signup_code import SignupCode, SignupCodeType
     from app.models.program_level import ProgramLevel as PL
 
@@ -234,7 +298,8 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
 def create_signup_code(
     code: str,
     max_uses: int = 1,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    admin: User = Depends(get_admin_user)
 ):
     code = code.strip()
     existing = db.query(SignupCode).filter(
@@ -266,7 +331,7 @@ def get_public_levels(db: Session = Depends(get_db)):
             for l in levels]
 
 @router.post("/bootstrap")
-def bootstrap(db: Session = Depends(get_db)):
+def bootstrap(db: Session = Depends(get_db), admin: User = Depends(get_admin_user)):
     """Creates the default admin signup code if no codes exist yet"""
     from app.models.signup_code import SignupCode
     existing = db.query(SignupCode).first()
@@ -289,8 +354,9 @@ def admin_login(
     otp = generate_otp()
     store_otp(settings.ADMIN_EMAIL, otp)
     send_otp_email(settings.ADMIN_EMAIL, otp)
-    print(f"📧 Admin OTP: {otp}")
-    return {"message": "OTP sent (dev: use 123456)", "email": settings.ADMIN_EMAIL}
+    if not _on_railway():
+        print(f"📧 Admin OTP: {otp}")
+    return {"message": "OTP sent", "email": settings.ADMIN_EMAIL}
 
 @router.post("/admin/verify")
 def admin_verify(
@@ -299,7 +365,7 @@ def admin_verify(
 ):
     from app.services.email_service import verify_email_otp
     import os
-    is_dev = os.getenv("ENVIRONMENT", "development") != "production"
+    is_dev = not _on_railway()  # 123456 bypass only on your Mac
     if is_dev and code == "123456":
         pass  # Dev bypass
     elif not verify_email_otp(settings.ADMIN_EMAIL, code):

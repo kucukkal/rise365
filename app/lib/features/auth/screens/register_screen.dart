@@ -12,12 +12,14 @@ class RegisterScreen extends StatefulWidget {
   final String phone;
   final String codeType;
   final String signupCode;
+  final String verificationToken;
 
   const RegisterScreen({
     super.key,
     required this.phone,
     this.codeType = 'custom',
     this.signupCode = '',
+    this.verificationToken = '',
   });
 
   @override
@@ -115,6 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         programLevelId: levelId,
+        verificationToken: widget.verificationToken,
       );
       
       print('📱 Registration response: $response');

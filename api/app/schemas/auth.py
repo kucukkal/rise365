@@ -15,6 +15,7 @@ class RegisterRequest(BaseModel):
     program_level_id: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    verification_token: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str

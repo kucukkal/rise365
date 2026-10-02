@@ -52,7 +52,7 @@ class _OtpScreenState extends State<OtpScreen> {
   }
   setState(() => _isLoading = true);
   try {
-    await AuthApi.verifyOtp(
+    final verifyResult = await AuthApi.verifyOtp(
       phone: widget.phone,
       code: otp,
     );
@@ -64,6 +64,8 @@ class _OtpScreenState extends State<OtpScreen> {
             phone: widget.phone,
             signupCode: widget.signupCode,
             codeType: widget.codeType,
+            verificationToken:
+                verifyResult['verification_token']?.toString() ?? '',
           ),
         ),
       );
