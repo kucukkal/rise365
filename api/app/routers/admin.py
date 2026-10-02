@@ -121,9 +121,10 @@ def delete_user(
     if user.role == UserRole.admin:
         raise HTTPException(status_code=400,
                             detail="Cannot remove an admin user")
-    db.delete(user)
-    db.commit()
-    return {"message": f"{user.name} has been removed"}
+    name = user.name
+    from app.services.account_service import delete_user_account
+    delete_user_account(db, user)
+    return {"message": f"{name} has been removed"}
 
 @router.post("/users/{user_id}/make-admin")
 def make_admin(

@@ -1,8 +1,9 @@
+import 'package:rise365/core/utils/log.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class ApiService {
-  static const String baseUrl = 'https://rise365-production.up.railway.app/api/v1';
+  static const String baseUrl = String.fromEnvironment('API_URL', defaultValue: 'https://rise365-production.up.railway.app/api/v1');
   static const _storage = FlutterSecureStorage();
 
   static Dio _createDio() {
@@ -25,7 +26,7 @@ class ApiService {
         if (error.response?.statusCode == 401) {
           // Token expired or invalid — clear it
           await _storage.delete(key: 'access_token');
-          print('Token cleared due to 401');
+          devLog('Token cleared due to 401');
         }
         return handler.next(error);
       },

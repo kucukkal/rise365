@@ -1,3 +1,4 @@
+import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,7 +13,7 @@ import 'features/home/screens/splash_screen.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  print('Background message: ${message.notification?.title}');
+  devLog('Background message: ${message.notification?.title}');
 }
 
 void main() async {
@@ -22,11 +23,11 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print('✅ Firebase initialized successfully');
+    devLog('✅ Firebase initialized successfully');
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
     await _setupNotifications();
   } catch (e) {
-    print('❌ Firebase init error: $e');
+    devLog('❌ Firebase init error: $e');
   }
 
   runApp(const ProviderScope(child: Rise365App()));
@@ -43,7 +44,7 @@ Future<void> _setupNotifications() async {
     provisional: false,
   );
 
-  print('Permission status: ${settings.authorizationStatus}');
+  devLog('Permission status: ${settings.authorizationStatus}');
 
   if (settings.authorizationStatus == AuthorizationStatus.authorized ||
       settings.authorizationStatus == AuthorizationStatus.provisional) {
@@ -53,24 +54,24 @@ Future<void> _setupNotifications() async {
       final apnsToken = await messaging.getAPNSToken().timeout(
         const Duration(seconds: 10),
         onTimeout: () {
-          print('⚠️ APNS token timeout — continuing anyway');
+          devLog('⚠️ APNS token timeout — continuing anyway');
           return null;
         },
       );
-      print('APNS Token: $apnsToken');
+      devLog('APNS Token: $apnsToken');
     } catch (e) {
-      print('APNS token error (non-fatal): $e');
+      devLog('APNS token error (non-fatal): $e');
     }
 
     // Now get FCM token
     try {
       final token = await messaging.getToken();
-      print('🔥 FCM Token: ${token?.substring(0, 20)}...');
+      devLog('🔥 FCM Token: ${token?.substring(0, 20)}...');
       if (token != null) {
         await _saveFcmToken(token);
       }
     } catch (e) {
-      print('FCM token error: $e');
+      devLog('FCM token error: $e');
     }
 
     // Listen for token refresh
@@ -78,12 +79,12 @@ Future<void> _setupNotifications() async {
 
     // Foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Foreground message: ${message.notification?.title}');
+      devLog('Foreground message: ${message.notification?.title}');
     });
 
     // Handle notification tap when app is in background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('Notification tapped: ${message.data}');
+      devLog('Notification tapped: ${message.data}');
       _handleNotificationTap(message.data);
     });
 
@@ -102,7 +103,7 @@ void _handleNotificationTap(Map<String, dynamic> data) {
   final type = data['type'] ?? '';
   final tab = data['tab'] ?? 'tasks';
   final frequency = data['frequency'] ?? 'daily';
-  print('Notification tap: type=$type tab=$tab frequency=$frequency');
+  devLog('Notification tap: type=$type tab=$tab frequency=$frequency');
 
   int tabIndex = 0;
   if (tab == 'prayer' || type.contains('prayer')) {
@@ -113,17 +114,17 @@ void _handleNotificationTap(Map<String, dynamic> data) {
 }
 
 Future<void> _saveFcmToken(String token) async {
-  print('💾 Saving FCM token...');
+  devLog('💾 Saving FCM token...');
   try {
     final isLoggedIn = await ApiService.isLoggedIn();
     if (isLoggedIn) {
       await UsersApi.updateFcmToken(token);
-      print('✅ FCM token saved to backend');
+      devLog('✅ FCM token saved to backend');
     } else {
-      print('⚠️ Not logged in — token will be saved after login');
+      devLog('⚠️ Not logged in — token will be saved after login');
     }
   } catch (e) {
-    print('❌ FCM token save error: $e');
+    devLog('❌ FCM token save error: $e');
   }
 }
 

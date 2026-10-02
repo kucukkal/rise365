@@ -1,3 +1,4 @@
+import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
@@ -41,12 +42,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!phone.startsWith('+')) {
       phone = '+1$phone';
     }
-    print('📱 Sending OTP to: $phone with code: ${_codeController.text.trim()}');
+    devLog('📱 Sending OTP to: $phone with code: ${_codeController.text.trim()}');
     final result = await AuthApi.sendOtp(
       phone: phone,
       signupCode: _codeController.text.trim(),
     );
-    print('📱 OTP result: $result');
+    devLog('📱 OTP result: $result');
     if (mounted) {
       Navigator.push(
         context,
@@ -60,12 +61,12 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   } catch (e) {
-  print('❌ Error type: ${e.runtimeType}');
-  print('❌ Error: $e');
+  devLog('❌ Error type: ${e.runtimeType}');
+  devLog('❌ Error: $e');
   String errorMsg = 'Something went wrong';
   if (e is DioException) {
-    print('❌ Status: ${e.response?.statusCode}');
-    print('❌ Data: ${e.response?.data}');
+    devLog('❌ Status: ${e.response?.statusCode}');
+    devLog('❌ Data: ${e.response?.data}');
     errorMsg = e.response?.data?['detail'] ?? e.message ?? errorMsg;
   }
   if (mounted) {

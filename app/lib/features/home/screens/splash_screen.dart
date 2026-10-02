@@ -1,3 +1,4 @@
+import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/users_api.dart';
@@ -46,7 +47,7 @@ class _SplashScreenState extends State<SplashScreen>
         });
       }
     } catch (e) {
-      print('Quote error: $e');
+      devLog('Quote error: $e');
     }
   }
 

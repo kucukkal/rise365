@@ -1,3 +1,4 @@
+import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../core/theme/app_theme.dart';
@@ -84,7 +85,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         await UsersApi.updateFcmToken(token);
       }
     } catch (e) {
-      print('FCM token error: $e');
+      devLog('FCM token error: $e');
     }
   }
 
@@ -109,7 +110,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             (_levels.isNotEmpty ? _levels.first['id'] : 'level_1');
       }
 
-      print('📱 Registering with: phone=${widget.phone}, name=$_fullName, levelId=$levelId, codeType=${widget.codeType}, signupCode=${widget.signupCode}');
+      devLog('📱 Registering with: phone=${widget.phone}, name=$_fullName, levelId=$levelId, codeType=${widget.codeType}, signupCode=${widget.signupCode}');
 
       final response = await AuthApi.register(
         phone: widget.phone,
@@ -120,7 +121,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         verificationToken: widget.verificationToken,
       );
       
-      print('📱 Registration response: $response');
+      devLog('📱 Registration response: $response');
 
       final user = UserModel(
         id: response['user_id'] ?? '',
@@ -153,7 +154,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } catch (e) {
-      print('❌ Registration error: $e');
+      devLog('❌ Registration error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

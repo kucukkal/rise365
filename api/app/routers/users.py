@@ -87,3 +87,18 @@ def _points_to_next(rate: float) -> str:
     if rate < 81: return f"{81 - rate:.1f}% more to Sapphire"
     if rate < 91: return f"{91 - rate:.1f}% more to Diamond"
     return "Maximum level reached!"
+
+
+@router.delete("/me")
+def delete_my_account(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Apple guideline 5.1.1(v): users can delete their account in the app."""
+    from fastapi import HTTPException
+    from app.models.user import UserRole
+    from app.services.account_service import delete_user_account
+    if current_user.role == UserRole.admin:
+        raise HTTPException(400, "Admin accounts can't be deleted from the app")
+    delete_user_account(db, current_user)
+    return {"message": "Your account and data have been deleted"}

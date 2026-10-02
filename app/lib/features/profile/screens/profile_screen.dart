@@ -1,8 +1,10 @@
+import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/users_api.dart';
+import '../../auth/screens/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final UserModel user;
@@ -41,9 +43,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     } catch (e) {
-      print('Profile refresh error: $e');
+      devLog('Profile refresh error: $e');
     }
     setState(() => _isLoading = false);
+  }
+
+  Future<void> _confirmDeleteAccount() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete account?'),
+        content: const Text(
+          'This permanently deletes your account, progress, prayer history '
+          'and events. This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete',
+                style: TextStyle(color: AppColors.error,
+                    fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await ApiService.dio.delete('/users/me');
+      await ApiService.clearToken();
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Could not delete your account. Please try again.'),
+        backgroundColor: AppColors.error,
+      ));
+    }
   }
 
   Color _achievementColor(String level) {
@@ -190,6 +230,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _LevelRow(name: 'Sapphire', range: '81% – 90%', color: AppColors.sapphire, current: level),
               _LevelRow(name: 'Diamond', range: '91% – 100%', color: AppColors.diamond, current: level),
             ]),
+          ),
+          const SizedBox(height: 24),
+
+          // Delete account (required by Apple)
+          Center(
+            child: TextButton.icon(
+              onPressed: _confirmDeleteAccount,
+              icon: const Icon(Icons.delete_outline,
+                  color: AppColors.error, size: 18),
+              label: const Text('Delete account',
+                  style: TextStyle(color: AppColors.error, fontSize: 13)),
+            ),
           ),
           const SizedBox(height: 32),
         ]),

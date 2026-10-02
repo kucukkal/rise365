@@ -1,3 +1,4 @@
+import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
 import '../task_theme.dart';
 import '../../../core/theme/app_theme.dart';
@@ -81,7 +82,7 @@ class _TasksScreenState extends State<TasksScreen>
         _isLoading = false;
       });
     } catch (e) {
-      print('Load tasks error: $e');
+      devLog('Load tasks error: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -97,7 +98,7 @@ class _TasksScreenState extends State<TasksScreen>
             profile['achievement_level'] ?? 'Starter';
       });
     } catch (e) {
-      print('Profile refresh error: $e');
+      devLog('Profile refresh error: $e');
     }
   }
 

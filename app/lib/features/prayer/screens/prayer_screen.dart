@@ -1,3 +1,4 @@
+import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/prayer_time_service.dart';
@@ -41,7 +42,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('Load prayers error: $e');
+      devLog('Load prayers error: $e');
       setState(() => _isLoading = false);
     }
   }
