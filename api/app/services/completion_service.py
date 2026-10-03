@@ -291,7 +291,6 @@ def update_weekly_achievement(user: User, db: Session):
     pct = calculate_weighted_completion(user, db)
     new_level = get_achievement_level(pct)
     old_level = user.achievement_level
-    user.achievement_level = new_level
     user.completion_rate = pct
     db.commit()
     print(f"✅ {user.name}: {pct:.1f}% → {new_level} (was {old_level})")

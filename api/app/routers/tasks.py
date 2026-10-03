@@ -140,7 +140,6 @@ def complete_task(
     )
     db.add(completion)
     current_user.total_points += task.points
-    _update_completion_rate(current_user, db)
     db.commit()
 
     return {"message": "Task completed", "points_earned": task.points, "total_points": current_user.total_points}
