@@ -1,7 +1,7 @@
 """circles
 
 Revision ID: a68157b83e3f
-Revises: d243a780c058
+Revises: e1035fe78463
 Create Date: 2026-10-02 23:57:12.785231
 
 """
@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision: str = 'a68157b83e3f'
-down_revision: Union[str, Sequence[str], None] = 'd243a780c058'
+down_revision: Union[str, Sequence[str], None] = 'e1035fe78463'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

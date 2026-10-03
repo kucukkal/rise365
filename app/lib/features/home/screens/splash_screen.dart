@@ -70,6 +70,7 @@ class _SplashScreenState extends State<SplashScreen>
             programLevel: data['program_level'] ?? '',
             totalPoints: data['total_points'] ?? 0,
             completionRate: (data['completion_rate'] ?? 0.0).toDouble(),
+            achievementLevel: data['achievement_level'] ?? 'Starter',
           );
           Navigator.pushReplacement(
             context,
