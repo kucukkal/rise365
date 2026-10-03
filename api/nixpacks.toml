@@ -1,5 +1,7 @@
-# Install dependencies with the same Poetry version used locally (2.4.1).
+# Poetry gets its own environment (/opt/poetry) so installing the app's
+# packages into /opt/venv can't break Poetry itself.
 [phases.install]
 cmds = [
-  "python -m venv --copies /opt/venv && . /opt/venv/bin/activate && pip install poetry==2.4.1 && poetry install --only main --no-root --no-interaction --no-ansi"
+  "python -m venv /opt/poetry && /opt/poetry/bin/pip install -q poetry==2.4.1",
+  "python -m venv --copies /opt/venv && . /opt/venv/bin/activate && /opt/poetry/bin/poetry install --only main --no-root --no-interaction --no-ansi"
 ]
