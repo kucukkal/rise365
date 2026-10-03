@@ -38,24 +38,31 @@ def _add_minutes(time_str: str, minutes: int) -> str:
     except:
         return time_str
 
-def _window_expired(prayer_time_str: str, window_minutes: int = 45) -> bool:
+def _now_in(tz: str = None) -> datetime:
+    """Current wall-clock time in the user's time zone (naive)."""
+    from zoneinfo import ZoneInfo
+    from app.services.timeutil import DEFAULT_TZ
     try:
-        t = datetime.strptime(prayer_time_str.split(" ")[0], "%H:%M")
-        now = datetime.now()
-        prayer_dt = now.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
-        diff = (now - prayer_dt).total_seconds() / 60
+        return datetime.now(ZoneInfo(tz or DEFAULT_TZ)).replace(tzinfo=None)
+    except Exception:
+        return datetime.now()
+
+def _prayer_dt(time_str: str, now: datetime) -> datetime:
+    t = datetime.strptime(time_str.strip(), "%I:%M %p")   # e.g. "8:09 PM"
+    return now.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
+
+def _window_expired(prayer_time_str: str, now: datetime, window_minutes: int = 45) -> bool:
+    try:
+        diff = (now - _prayer_dt(prayer_time_str, now)).total_seconds() / 60
         return diff > window_minutes
-    except:
+    except Exception:
         return False
 
-def _minutes_left(prayer_time_str: str, window_minutes: int = 45) -> int:
+def _minutes_left(prayer_time_str: str, now: datetime, window_minutes: int = 45) -> int:
     try:
-        t = datetime.strptime(prayer_time_str.split(" ")[0], "%H:%M")
-        now = datetime.now()
-        prayer_dt = now.replace(hour=t.hour, minute=t.minute, second=0, microsecond=0)
-        diff = (now - prayer_dt).total_seconds() / 60
+        diff = (now - _prayer_dt(prayer_time_str, now)).total_seconds() / 60
         return max(0, int(window_minutes - diff))
-    except:
+    except Exception:
         return window_minutes
 
 async def get_prayer_times(
@@ -63,17 +70,27 @@ async def get_prayer_times(
     country: str = "US",
     level_order: int = 0,
     completed_names: set = None,
+    latitude: float = None,
+    longitude: float = None,
+    tz: str = None,
 ):
     if completed_names is None:
         completed_names = set()
+    now_local = _now_in(tz)
+    date_str = now_local.strftime("%d-%m-%Y")
 
     try:
         async with httpx.AsyncClient(follow_redirects=True, timeout=15) as client:
-            response = await client.get(
-                "https://api.aladhan.com/v1/timingsByCity",
-                params={"city": city, "country": country, "method": 2},
-                timeout=10.0,
-            )
+            if latitude is not None and longitude is not None:
+                response = await client.get(
+                    f"https://api.aladhan.com/v1/timings/{date_str}",
+                    params={"latitude": latitude, "longitude": longitude, "method": 2},
+                )
+            else:
+                response = await client.get(
+                    f"https://api.aladhan.com/v1/timingsByCity/{date_str}",
+                    params={"city": city, "country": country, "method": 2},
+                )
             data = response.json()
             timings = data["data"]["timings"]
             times = {
@@ -122,11 +139,11 @@ async def get_prayer_times(
         window_expired = False
         minutes_left = None
         if level_order >= 2 and not is_completed:
-            window_expired = _window_expired(times[name])
+            window_expired = _window_expired(times[name], now_local)
             if window_expired:
                 is_locked = True
             else:
-                ml = _minutes_left(times[name])
+                ml = _minutes_left(times[name], now_local)
                 if ml < 45:
                     minutes_left = ml
 

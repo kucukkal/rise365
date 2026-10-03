@@ -30,6 +30,9 @@ class AuthApi {
     String? firstName,
     String? lastName,
     String? verificationToken,
+    String? zipCode,
+    String? city,
+    String? state,
   }) async {
     final response = await ApiService.dio.post('/auth/register', data: {
       'phone': phone,
@@ -38,6 +41,9 @@ class AuthApi {
       if (firstName != null) 'first_name': firstName,
       if (lastName != null) 'last_name': lastName,
       if (verificationToken != null) 'verification_token': verificationToken,
+      if (zipCode != null) 'zip_code': zipCode,
+      if (city != null) 'city': city,
+      if (state != null) 'state': state,
     });
     if (response.data['access_token'] != null) {
       await ApiService.saveToken(response.data['access_token']);

@@ -12,6 +12,13 @@ class UserRole(str, enum.Enum):
 class User(Base):
     __tablename__ = "users"
 
+    city = Column(String(100), nullable=True)
+    state = Column(String(20), nullable=True)
+    zip_code = Column(String(10), nullable=True)
+    location_label = Column(String(120), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    timezone = Column(String(64), nullable=True)
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
