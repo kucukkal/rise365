@@ -11,3 +11,4 @@ from app.models.event import Event, EventCompletion
 from app.models.app_setting import AppSetting
 from app.models.quote import Quote
 from app.models.excel_content import ExcelTaskContent
+from app.models.circle import Circle, CircleMember
