@@ -20,6 +20,8 @@ def resolve_location(zip_code=None, city=None, state=None, country: str = "US"):
     zip_code = (zip_code or "").strip()
     city = " ".join((city or "").split())
     state = (state or "").strip().upper()
+    if zip_code and (city or state):
+        return None  # exactly one option: ZIP code OR city + state
 
     if zip_code:
         if not re.fullmatch(r"\d{5}", zip_code):

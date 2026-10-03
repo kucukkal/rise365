@@ -1,5 +1,6 @@
 import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
+import '../../../core/services/progress_refresh.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import '../../../core/theme/app_theme.dart';
@@ -27,6 +28,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _refreshProfile();
+    progressRefresh.addListener(_onProgressRefresh);
+  }
+
+  void _onProgressRefresh() {
+    if (mounted) _refreshProfile();
+  }
+
+  @override
+  void dispose() {
+    progressRefresh.removeListener(_onProgressRefresh);
+    super.dispose();
   }
 
   Future<void> _refreshProfile() async {
@@ -94,65 +106,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final zip = TextEditingController();
     final city = TextEditingController();
     final st = TextEditingController();
+    bool useZip = true;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Your location'),
-        content: SingleChildScrollView(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Text('Used for accurate prayer times. Enter your ZIP code, or your city and state.',
-                style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-            const SizedBox(height: 12),
-            TextField(
-              controller: zip,
-              keyboardType: TextInputType.number,
-              maxLength: 5,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(labelText: 'ZIP code', counterText: ''),
-            ),
-            const SizedBox(height: 6),
-            const Text('or', style: TextStyle(fontSize: 12, color: AppColors.textHint)),
-            Row(children: [
-              Expanded(
-                flex: 3,
-                child: TextField(
-                  controller: city,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(labelText: 'City'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: TextField(
-                  controller: st,
-                  maxLength: 2,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(labelText: 'State', counterText: ''),
-                ),
-              ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setD) => AlertDialog(
+          title: const Text('Your location'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              const Text('Used for accurate prayer times.',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+              const SizedBox(height: 12),
+              SegmentedButton<bool>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: true, label: Text('ZIP code')),
+                        ButtonSegment(value: false, label: Text('City & State')),
+                      ],
+                      selected: {useZip},
+                      onSelectionChanged: (s) => setD(() => useZip = s.first),
+                    ),
+              const SizedBox(height: 10),
+              if (useZip)
+                TextField(
+                  controller: zip,
+                  keyboardType: TextInputType.number,
+                  maxLength: 5,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(labelText: 'ZIP code', counterText: ''),
+                )
+              else
+                Row(children: [
+                  Expanded(
+                    flex: 3,
+                    child: TextField(
+                      controller: city,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(labelText: 'City'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: TextField(
+                      controller: st,
+                      maxLength: 2,
+                      textCapitalization: TextCapitalization.characters,
+                      decoration: const InputDecoration(labelText: 'State', counterText: ''),
+                    ),
+                  ),
+                ]),
             ]),
-          ]),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Save')),
-        ],
       ),
     );
     if (ok != true || !mounted) return;
     final z = zip.text.trim();
     final c = city.text.trim();
     final s = st.text.trim().toUpperCase();
-    if (!RegExp(r'^\d{5}$').hasMatch(z) && (c.isEmpty || s.length != 2)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Please enter a 5-digit ZIP code, or a city and 2-letter state')));
+    final valid = useZip ? RegExp(r'^\d{5}$').hasMatch(z) : (c.isNotEmpty && s.length == 2);
+    if (!valid) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(useZip
+              ? 'Please enter a 5-digit ZIP code'
+              : 'Please enter a city and 2-letter state')));
       return;
     }
     try {
-      final res = await ApiService.dio.put('/users/me/location', data: {
-        if (RegExp(r'^\d{5}$').hasMatch(z)) 'zip_code': z else ...{'city': c, 'state': s},
-      });
+      final res = await ApiService.dio.put('/users/me/location',
+          data: useZip ? {'zip_code': z} : {'city': c, 'state': s});
       if (!mounted) return;
       setState(() => _locationLabel = res.data['location_label']);
       ScaffoldMessenger.of(context).showSnackBar(

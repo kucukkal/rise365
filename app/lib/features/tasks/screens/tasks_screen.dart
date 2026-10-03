@@ -1,5 +1,6 @@
 import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
+import '../../../core/services/progress_refresh.dart';
 import '../task_theme.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/tasks_api.dart';
@@ -45,6 +46,12 @@ class _TasksScreenState extends State<TasksScreen>
     _completionRate = widget.user.completionRate;
     _achievementLevel = widget.user.achievementLevel;
     _loadTasks();
+    _refreshProfile();
+    progressRefresh.addListener(_onProgressRefresh);
+  }
+
+  void _onProgressRefresh() {
+    if (mounted) _refreshProfile();
   }
 
   @override
@@ -61,6 +68,7 @@ class _TasksScreenState extends State<TasksScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    progressRefresh.removeListener(_onProgressRefresh);
     super.dispose();
   }
 
