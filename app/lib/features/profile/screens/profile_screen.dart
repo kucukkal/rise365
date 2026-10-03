@@ -55,7 +55,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             programLevel: data['program_level'] ?? user.programLevel,
             totalPoints: data['total_points'] ?? user.totalPoints,
             completionRate: (data['completion_rate'] ?? user.completionRate).toDouble(),
-            achievementLevel: data['achievement_level'] ?? user.achievementLevel,
           );
         });
       }
