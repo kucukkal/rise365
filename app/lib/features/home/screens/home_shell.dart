@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/progress_refresh.dart';
 import '../../../core/services/notification_navigation.dart';
 import '../../../core/services/prayer_time_service.dart';
 import '../../../shared/models/user_model.dart';
@@ -78,7 +79,10 @@ class _HomeShellState extends State<HomeShell> {
               children: [
                 BottomNavigationBar(
                   currentIndex: _currentIndex,
-                  onTap: (i) => setState(() => _currentIndex = i),
+                  onTap: (i) {
+                    setState(() => _currentIndex = i);
+                    progressRefresh.value++;
+                  },
                   backgroundColor: AppColors.surface,
                   selectedItemColor: AppColors.primary,
                   unselectedItemColor: AppColors.textHint,

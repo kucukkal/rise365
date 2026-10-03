@@ -1,5 +1,6 @@
 import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
+import '../../../core/services/progress_refresh.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/models/user_model.dart';
 import '../../../core/services/api_service.dart';
@@ -24,6 +25,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _refreshProfile();
+    progressRefresh.addListener(_onProgressRefresh);
+  }
+
+  void _onProgressRefresh() {
+    if (mounted) _refreshProfile();
+  }
+
+  @override
+  void dispose() {
+    progressRefresh.removeListener(_onProgressRefresh);
+    super.dispose();
   }
 
   Future<void> _refreshProfile() async {

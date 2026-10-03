@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/api_service.dart';
+import '../../../core/services/progress_refresh.dart';
 
 String _errorText(Object e, [String fallback = 'Something went wrong. Please try again.']) {
   if (e is DioException) {
@@ -44,6 +45,17 @@ class _CirclesScreenState extends State<CirclesScreen> {
   void initState() {
     super.initState();
     _load();
+    progressRefresh.addListener(_onTabRefresh);
+  }
+
+  void _onTabRefresh() {
+    if (mounted) _load();
+  }
+
+  @override
+  void dispose() {
+    progressRefresh.removeListener(_onTabRefresh);
+    super.dispose();
   }
 
   Future<void> _load() async {
