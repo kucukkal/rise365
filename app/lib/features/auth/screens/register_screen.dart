@@ -1,5 +1,7 @@
 import 'package:rise365/core/utils/log.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/api_service.dart';
@@ -30,6 +32,9 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+  final _zipController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
 
   String get _fullName =>
       '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}'.trim();
@@ -74,6 +79,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
+    _zipController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
     super.dispose();
   }
 
@@ -89,11 +97,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  String _errorMessage(Object e) {
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map && data['detail'] is String) return data['detail'];
+    }
+    return 'Something went wrong. Please try again.';
+  }
+
   void _register() async {
     if (_firstNameController.text.trim().isEmpty ||
         _lastNameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter your first and last name')));
+      return;
+    }
+
+    final zip = _zipController.text.trim();
+    final city = _cityController.text.trim();
+    final st = _stateController.text.trim().toUpperCase();
+    final zipOk = RegExp(r'^\d{5}$').hasMatch(zip);
+    if (!zipOk && (city.isEmpty || st.length != 2)) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Please enter your 5-digit ZIP code, or your city and 2-letter state')));
       return;
     }
 
@@ -119,6 +145,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         lastName: _lastNameController.text.trim(),
         programLevelId: levelId,
         verificationToken: widget.verificationToken,
+        zipCode: zipOk ? zip : null,
+        city: zipOk ? null : city,
+        state: zipOk ? null : st,
       );
       
       devLog('📱 Registration response: $response');
@@ -158,7 +187,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(_errorMessage(e)),
             backgroundColor: AppColors.error,
           ),
         );
@@ -245,6 +274,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             color: AppColors.textHint),
                       ),
                     ),
+
+                    // Location
+                    const SizedBox(height: 24),
+                    const Text('Your Location',
+                        style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.textPrimary)),
+                    const SizedBox(height: 4),
+                    const Text(
+                        'Used for accurate prayer times. Enter your ZIP code, or your city and state.',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _zipController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 5,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      decoration: const InputDecoration(
+                        hintText: 'ZIP code (e.g. 20170)',
+                        counterText: '',
+                        prefixIcon: Icon(Icons.location_on_outlined,
+                            color: AppColors.textHint),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Center(
+                        child: Text('or',
+                            style: TextStyle(fontSize: 12, color: AppColors.textHint))),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(
+                        flex: 3,
+                        child: TextField(
+                          controller: _cityController,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: const InputDecoration(hintText: 'City'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          controller: _stateController,
+                          textCapitalization: TextCapitalization.characters,
+                          maxLength: 2,
+                          decoration: const InputDecoration(
+                              hintText: 'State (VA)', counterText: ''),
+                        ),
+                      ),
+                    ]),
 
                     // Level selection — only for custom codes
                     if (widget.codeType == 'custom') ...[

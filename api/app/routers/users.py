@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from typing import Optional
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
@@ -44,6 +46,11 @@ def get_profile(
         "name": current_user.name,
         "first_name": getattr(current_user, "first_name", None),
         "last_name": getattr(current_user, "last_name", None),
+        "location_label": getattr(current_user, "location_label", None),
+        "zip_code": getattr(current_user, "zip_code", None),
+        "city": getattr(current_user, "city", None),
+        "state": getattr(current_user, "state", None),
+        "timezone": getattr(current_user, "timezone", None),
         "phone": current_user.phone,
         "program_level_id": current_user.program_level_id,
         "program_level": level_name or "Level 1",
@@ -102,3 +109,28 @@ def delete_my_account(
         raise HTTPException(400, "Admin accounts can't be deleted from the app")
     delete_user_account(db, current_user)
     return {"message": "Your account and data have been deleted"}
+
+
+class LocationUpdate(BaseModel):
+    zip_code: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+
+
+@router.put("/me/location")
+def update_location(
+    req: LocationUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    from app.services.location_service import resolve_location, LocationLookupError
+    try:
+        loc = resolve_location(req.zip_code, req.city, req.state)
+    except LocationLookupError:
+        raise HTTPException(503, "Location lookup is unavailable right now. Please try again.")
+    if not loc:
+        raise HTTPException(400, "We couldn't find that location. Please check the ZIP code, or the city and state.")
+    for k, v in loc.items():
+        setattr(current_user, k, v)
+    db.commit()
+    return {"message": "Location updated", "location_label": loc["location_label"]}

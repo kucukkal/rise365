@@ -7,30 +7,14 @@ from app.models.prayer import PrayerLog
 from app.models.event import Event, EventCompletion
 from app.services.prayer_service import PRAYER_POINTS
 
-def get_period_boundaries():
-    """
-    Get period start times with 4 AM cutoff.
-    Day starts at 4:00 AM and ends at 3:59 AM next day.
-    """
-    now = datetime.utcnow()
-
-    # Daily: 4 AM today (or yesterday if before 4 AM)
-    today_4am = now.replace(hour=4, minute=0, second=0, microsecond=0)
-    if now < today_4am:
-        daily_start = today_4am - timedelta(days=1)
-    else:
-        daily_start = today_4am
-
-    # Weekly: Last Monday at 4 AM
-    days_since_monday = daily_start.weekday()
-    weekly_start = (daily_start - timedelta(days=days_since_monday)).replace(
-        hour=4, minute=0, second=0, microsecond=0)
-
-    # Monthly: 1st of current month at 4 AM
-    monthly_start = daily_start.replace(day=1, hour=4, minute=0,
-                                        second=0, microsecond=0)
-
-    return daily_start, weekly_start, monthly_start
+def get_period_boundaries(user=None):
+    """Day starts at 4:00 AM in the user's local time; week on Monday, month on the 1st.
+    Returned as naive UTC datetimes."""
+    from app.services.timeutil import day_start_local, to_utc_naive
+    daily_local = day_start_local(user)
+    weekly_local = daily_local - timedelta(days=daily_local.weekday())
+    monthly_local = daily_local.replace(day=1)
+    return to_utc_naive(daily_local), to_utc_naive(weekly_local), to_utc_naive(monthly_local)
 
 def get_user_level_type(user: User, db: Session) -> str:
     """Get user's level type (seed/myrise/custom)"""
@@ -151,7 +135,7 @@ def get_earned_points(user: User, db: Session) -> dict:
     Calculate points earned in current period windows.
     Uses 4 AM cutoff for all periods.
     """
-    daily_start, weekly_start, monthly_start = get_period_boundaries()
+    daily_start, weekly_start, monthly_start = get_period_boundaries(user)
     now = datetime.utcnow()
 
     # ── Daily earned ─────────────────────────────────────────────────────────

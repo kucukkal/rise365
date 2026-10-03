@@ -27,8 +27,10 @@ def _get_level_order(user: User, db: Session) -> int:
     except:
         return 0
 
-def _today_start():
-    return datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+def _today_start(user=None):
+    """Start of the user's prayer day: 4:00 AM in their own time zone (as UTC)."""
+    from app.services.timeutil import day_start_local, to_utc_naive
+    return to_utc_naive(day_start_local(user))
 
 @router.get("/today")
 async def get_today_prayers(
@@ -37,7 +39,7 @@ async def get_today_prayers(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    today_start = _today_start()
+    today_start = _today_start(current_user)
     level_order = _get_level_order(current_user, db)
 
     completed_logs = db.query(PrayerLog).filter(
@@ -56,6 +58,9 @@ async def get_today_prayers(
         country=country,
         level_order=level_order,
         completed_names=completed_names,
+        latitude=getattr(current_user, "latitude", None),
+        longitude=getattr(current_user, "longitude", None),
+        tz=getattr(current_user, "timezone", None),
     )
 
     # Count only main prayers (not evrad entries)
@@ -63,8 +68,8 @@ async def get_today_prayers(
     completed_count = sum(1 for p in main_prayers if p["is_completed"])
 
     return {
-        "date": datetime.utcnow().strftime("%A, %B %d"),
-        "location": f"{city}, {country}",
+        "date": __import__("app.services.timeutil", fromlist=["local_now"]).local_now(current_user).strftime("%A, %B %d"),
+        "location": getattr(current_user, "location_label", None) or f"{city}, {country}",
         "level_order": level_order,
         "prayers": prayers,
         "total_completed": completed_count,
@@ -77,7 +82,7 @@ def complete_prayer(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    today_start = _today_start()
+    today_start = _today_start(current_user)
     prayer_name = request.prayer_name
     level_order = _get_level_order(current_user, db)
     is_evrad = prayer_name.endswith("_evrad")

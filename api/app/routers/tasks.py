@@ -20,36 +20,21 @@ def _content_last():
         else_=0,
     )
 
-def get_period_range(frequency: str, use_4am: bool = True):
-    now = datetime.utcnow()
-    cutoff_hour = 4 if use_4am else 0
-
+def get_period_range(frequency: str, use_4am: bool = True, user=None):
+    """Current daily/weekly/monthly period in the user's local time, returned as naive UTC."""
+    from app.services.timeutil import day_start_local, to_utc_naive
+    day = day_start_local(user, hour=4 if use_4am else 0)
     if frequency == "daily":
-        start = now.replace(hour=cutoff_hour, minute=0, second=0, microsecond=0)
-        if now.hour < cutoff_hour:
-            start = start - timedelta(days=1)
+        start = day
         end = start + timedelta(days=1)
-
     elif frequency == "weekly":
-        # Find last Monday at 4 AM
-        today_4am = now.replace(hour=cutoff_hour, minute=0, second=0, microsecond=0)
-        if now.hour < cutoff_hour:
-            today_4am = today_4am - timedelta(days=1)
-        days_since_monday = today_4am.weekday()
-        start = today_4am - timedelta(days=days_since_monday)
+        start = day - timedelta(days=day.weekday())
         end = start + timedelta(weeks=1)
-
     else:  # monthly
-        today_4am = now.replace(hour=cutoff_hour, minute=0, second=0, microsecond=0)
-        if now.hour < cutoff_hour:
-            today_4am = today_4am - timedelta(days=1)
-        start = today_4am.replace(day=1)
-        if today_4am.month == 12:
-            end = start.replace(year=today_4am.year + 1, month=1)
-        else:
-            end = start.replace(month=today_4am.month + 1)
-
-    return start, end
+        start = day.replace(day=1)
+        end = start.replace(year=start.year + 1, month=1) if start.month == 12 \
+            else start.replace(month=start.month + 1)
+    return to_utc_naive(start), to_utc_naive(end)
 
 @router.get("/", response_model=List[TaskResponse])
 def get_tasks(
@@ -92,7 +77,7 @@ def get_tasks(
 
     for task in tasks:
         freq = task.frequency.value if hasattr(task.frequency, 'value') else task.frequency
-        start, end = get_period_range(freq, use_4am=True)
+        start, end = get_period_range(freq, use_4am=True, user=current_user)
 
         completion = db.query(TaskCompletion).filter(
             and_(
@@ -129,7 +114,7 @@ def complete_task(
         raise HTTPException(status_code=404, detail="Task not found")
 
     freq = task.frequency.value if hasattr(task.frequency, 'value') else task.frequency
-    start, end = get_period_range(freq)
+    start, end = get_period_range(freq, user=current_user)
 
     existing = db.query(TaskCompletion).filter(
         and_(

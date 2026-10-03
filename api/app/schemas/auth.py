@@ -16,6 +16,9 @@ class RegisterRequest(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     verification_token: Optional[str] = None
+    zip_code: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
 
 class TokenResponse(BaseModel):
     access_token: str

@@ -209,9 +209,27 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
             assigned_level_id = str(personal_level.id)
     phone = format_phone(request.phone)
 
+    # Location (ZIP, or city + state) for prayer times and local time
+    loc = None
+    if (request.zip_code or "").strip() or (request.city or "").strip():
+        from app.services.location_service import resolve_location, LocationLookupError
+        try:
+            loc = resolve_location(request.zip_code, request.city, request.state)
+            if not loc:
+                raise HTTPException(
+                    status_code=400,
+                    detail="We couldn't find that location. Please check the ZIP code, or the city and state."
+                )
+        except LocationLookupError:
+            loc = None  # lookup service down: don't block signup; defaults apply
+
     # Check if user already exists
     existing = db.query(User).filter(User.phone == phone).first()
     if existing:
+        if loc:
+            for k, v in loc.items():
+                setattr(existing, k, v)
+            db.commit()
         # Return token for existing user
         token = create_access_token({"sub": str(existing.id)})
         # Get level name for existing user
@@ -242,6 +260,7 @@ def register(request: RegisterRequest, db: Session = Depends(get_db)):
         first_name=first_name or None,
         last_name=last_name or None,
         phone=phone,
+        **(loc or {}),
         program_level_id=assigned_level_id,
         total_points=0,
         completion_rate=0.0,
