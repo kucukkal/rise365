@@ -1,6 +1,12 @@
-"""Turn a US ZIP code or city + state into coordinates and a time zone,
-using Aladhan's address lookup (already used for prayer times)."""
+"""Turn a US ZIP code or city + state into coordinates, a readable label and a time zone.
+
+1. Zippopotam.us (free, no key) resolves ZIP codes and city/state -> place, lat, lng.
+2. Aladhan (already used for prayer times) gives the time zone for those coordinates.
+Aladhan's own address lookup is kept as a fallback.
+"""
 import re
+from datetime import datetime
+from urllib.parse import quote
 import httpx
 
 US_STATES = {
@@ -11,12 +17,65 @@ US_STATES = {
 
 
 class LocationLookupError(Exception):
-    """The lookup service could not be reached."""
+    """The lookup services could not be reached."""
+
+
+def _get(url, params=None):
+    r = httpx.get(url, params=params, follow_redirects=True, timeout=12)
+    return r
+
+
+def _zippopotam_zip(zip_code):
+    r = _get(f"https://api.zippopotam.us/us/{zip_code}")
+    if r.status_code == 404:
+        return None
+    r.raise_for_status()
+    place = (r.json().get("places") or [None])[0]
+    if not place:
+        return None
+    return {
+        "city": place.get("place name"),
+        "state": place.get("state abbreviation"),
+        "latitude": float(place["latitude"]),
+        "longitude": float(place["longitude"]),
+    }
+
+
+def _zippopotam_city(city, state):
+    r = _get(f"https://api.zippopotam.us/us/{state.lower()}/{quote(city.lower())}")
+    if r.status_code == 404:
+        return None
+    r.raise_for_status()
+    places = r.json().get("places") or []
+    if not places:
+        return None
+    lat = sum(float(p["latitude"]) for p in places) / len(places)
+    lng = sum(float(p["longitude"]) for p in places) / len(places)
+    return {"city": city.title(), "state": state, "latitude": lat, "longitude": lng}
+
+
+def _timezone_for(lat, lng):
+    date_str = datetime.utcnow().strftime("%d-%m-%Y")
+    r = _get(f"https://api.aladhan.com/v1/timings/{date_str}",
+             {"latitude": lat, "longitude": lng, "method": 2})
+    meta = (r.json().get("data") or {}).get("meta") or {}
+    return meta.get("timezone")
+
+
+def _aladhan_address(address):
+    r = _get("https://api.aladhan.com/v1/timingsByAddress", {"address": address, "method": 2})
+    data = r.json()
+    if data.get("code") != 200 or not isinstance(data.get("data"), dict):
+        return None
+    meta = data["data"].get("meta") or {}
+    if meta.get("latitude") is None or not meta.get("timezone"):
+        return None
+    return float(meta["latitude"]), float(meta["longitude"]), meta["timezone"]
 
 
 def resolve_location(zip_code=None, city=None, state=None, country: str = "US"):
     """Returns a dict of user fields, None if the place can't be found,
-    or raises LocationLookupError if the service is unreachable."""
+    or raises LocationLookupError if the services are unreachable."""
     zip_code = (zip_code or "").strip()
     city = " ".join((city or "").split())
     state = (state or "").strip().upper()
@@ -26,35 +85,37 @@ def resolve_location(zip_code=None, city=None, state=None, country: str = "US"):
     if zip_code:
         if not re.fullmatch(r"\d{5}", zip_code):
             return None
-        address = f"{zip_code}, {country}"
-        label = f"ZIP {zip_code}"
-    elif city and state in US_STATES:
-        address = f"{city}, {state}, {country}"
-        label = f"{city.title()}, {state}"
-    else:
+    elif not (city and state in US_STATES):
         return None
 
     try:
-        r = httpx.get("https://api.aladhan.com/v1/timingsByAddress",
-                      params={"address": address, "method": 2},
-                      follow_redirects=True, timeout=12)
-        data = r.json()
+        place = _zippopotam_zip(zip_code) if zip_code else _zippopotam_city(city, state)
+        tz = _timezone_for(place["latitude"], place["longitude"]) if place else None
+        if place and tz:
+            return {
+                "zip_code": zip_code or None,
+                "city": place["city"],
+                "state": place["state"],
+                "location_label": f"{place['city']}, {place['state']}",
+                "latitude": place["latitude"],
+                "longitude": place["longitude"],
+                "timezone": tz,
+            }
+        # Fallback: Aladhan's own address lookup
+        address = f"{zip_code}, {country}" if zip_code else f"{city}, {state}, {country}"
+        found = _aladhan_address(address)
+        if not found:
+            return None
+        lat, lng, tz = found
+        return {
+            "zip_code": zip_code or None,
+            "city": city.title() if city else None,
+            "state": state or None,
+            "location_label": f"ZIP {zip_code}" if zip_code else f"{city.title()}, {state}",
+            "latitude": lat,
+            "longitude": lng,
+            "timezone": tz,
+        }
     except Exception as e:
         print(f"location lookup error: {e}")
         raise LocationLookupError(str(e))
-
-    if data.get("code") != 200 or not isinstance(data.get("data"), dict):
-        return None
-    meta = data["data"].get("meta") or {}
-    lat, lng, tz = meta.get("latitude"), meta.get("longitude"), meta.get("timezone")
-    if lat is None or lng is None or not tz:
-        return None
-    return {
-        "zip_code": zip_code or None,
-        "city": city.title() if city else None,
-        "state": state or None,
-        "location_label": label,
-        "latitude": float(lat),
-        "longitude": float(lng),
-        "timezone": tz,
-    }
