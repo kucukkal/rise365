@@ -7,6 +7,7 @@ import '../../tasks/screens/tasks_screen.dart';
 import '../../prayer/screens/prayer_screen.dart';
 import '../../events/screens/events_screen.dart';
 import '../../profile/screens/profile_screen.dart';
+import '../../circles/screens/circles_screen.dart';
 
 class HomeShell extends StatefulWidget {
   final UserModel user;
@@ -61,6 +62,7 @@ class _HomeShellState extends State<HomeShell> {
           ),
           PrayerScreen(user: widget.user),
           EventsScreen(user: widget.user),
+          const CirclesScreen(),
           ProfileScreen(user: widget.user),
         ],
       ),
@@ -101,6 +103,11 @@ class _HomeShellState extends State<HomeShell> {
                       label: 'Events',
                     ),
                     BottomNavigationBarItem(
+                      icon: Icon(Icons.groups_2_outlined),
+                      activeIcon: Icon(Icons.groups_2_rounded),
+                      label: 'Circles',
+                    ),
+                    BottomNavigationBarItem(
                       icon: Icon(Icons.person_outline_rounded),
                       activeIcon: Icon(Icons.person_rounded),
                       label: 'Profile',
@@ -110,8 +117,8 @@ class _HomeShellState extends State<HomeShell> {
                 // Gold dot badge on Prayer tab when prayer time active
                 if (activePrayer != null)
                   Positioned(
-                    // Prayer tab is index 1 of 4 tabs
-                    left: MediaQuery.of(context).size.width * 0.375 - 5,
+                    // Prayer tab is index 1 of 5 tabs (center at 1.5/5 of the width)
+                    left: MediaQuery.of(context).size.width * 0.30 - 5,
                     top: 6,
                     child: Container(
                       width: 10,
