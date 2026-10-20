@@ -373,6 +373,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
   String? _error;
   bool _isOwner = false;
   List<dynamic> _members = [];
+  Map<String, dynamic>? _contest;
 
   @override
   void initState() {
@@ -382,11 +383,15 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
 
   Future<void> _load() async {
     try {
-      final res = await ApiService.dio.get('/circles/${widget.circleId}');
+      final results = await Future.wait([
+        ApiService.dio.get('/circles/${widget.circleId}'),
+        ApiService.dio.get('/circles/${widget.circleId}/contests/active'),
+      ]);
       if (!mounted) return;
       setState(() {
-        _isOwner = res.data['is_owner'] == true;
-        _members = res.data['members'] ?? [];
+        _isOwner = results[0].data['is_owner'] == true;
+        _members = results[0].data['members'] ?? [];
+        _contest = results[1].data['contest'];
         _error = null;
         _loading = false;
       });
@@ -418,6 +423,400 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
       ),
     );
     return ok == true;
+  }
+
+  // ── contest ───────────────────────────────────────────────────────────────
+
+  Future<void> _startContest() async {
+    final titleCtrl = TextEditingController();
+    DateTime? startDt;
+    DateTime? endDt;
+    final minPctCtrl = TextEditingController();
+    final minDaysCtrl = TextEditingController();
+
+    Future<DateTime?> pickDateTime(BuildContext ctx, String label) async {
+      final d = await showDatePicker(
+        context: ctx,
+        initialDate: DateTime.now().add(const Duration(minutes: 5)),
+        firstDate: DateTime.now().subtract(const Duration(minutes: 1)),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+      );
+      if (d == null) return null;
+      final t = await showTimePicker(context: ctx, initialTime: TimeOfDay.now());
+      if (t == null) return null;
+      return DateTime(d.year, d.month, d.day, t.hour, t.minute);
+    }
+
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
+        return AlertDialog(
+          title: const Text('Start a Contest'),
+          content: SingleChildScrollView(
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              TextField(
+                controller: titleCtrl,
+                maxLength: 100,
+                decoration: const InputDecoration(
+                    labelText: 'Contest title', hintText: 'e.g. Ramadan Sprint',
+                    counterText: ''),
+              ),
+              const SizedBox(height: 14),
+              // Start date
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.play_circle_outline, color: AppColors.primary),
+                title: Text(startDt == null
+                    ? 'Set start date & time'
+                    : 'Starts: ${_fmtDt(startDt!)}',
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: startDt == null
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimary)),
+                onTap: () async {
+                  final dt = await pickDateTime(ctx, 'Start');
+                  if (dt != null) setS(() => startDt = dt);
+                },
+              ),
+              // End date
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.stop_circle_outlined, color: AppColors.error),
+                title: Text(endDt == null
+                    ? 'Set end date & time'
+                    : 'Ends: ${_fmtDt(endDt!)}',
+                    style: TextStyle(
+                        fontSize: 14,
+                        color: endDt == null
+                            ? AppColors.textSecondary
+                            : AppColors.textPrimary)),
+                onTap: () async {
+                  final dt = await pickDateTime(ctx, 'End');
+                  if (dt != null) setS(() => endDt = dt);
+                },
+              ),
+              const Divider(height: 24),
+              const Text('Winning rules (optional)',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              Row(children: [
+                Expanded(
+                  child: TextField(
+                    controller: minPctCtrl,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    decoration: const InputDecoration(
+                        labelText: 'Min daily %',
+                        hintText: 'e.g. 80',
+                        counterText: ''),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: TextField(
+                    controller: minDaysCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                        labelText: 'Min days',
+                        hintText: 'e.g. 6',
+                        counterText: ''),
+                  ),
+                ),
+              ]),
+              const SizedBox(height: 8),
+              const Text(
+                'Leave both blank to rank by total progress sum.',
+                style: TextStyle(fontSize: 11, color: AppColors.textHint),
+              ),
+            ]),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Create',
+                    style: TextStyle(fontWeight: FontWeight.w600))),
+          ],
+        );
+      }),
+    );
+
+    if (ok != true) return;
+    if (titleCtrl.text.trim().isEmpty) {
+      _toast(context, 'Please enter a contest title.', error: true);
+      return;
+    }
+    if (startDt == null || endDt == null) {
+      _toast(context, 'Please set both start and end date/time.', error: true);
+      return;
+    }
+    if (!endDt!.isAfter(startDt!)) {
+      _toast(context, 'End must be after start.', error: true);
+      return;
+    }
+
+    final body = <String, dynamic>{
+      'title': titleCtrl.text.trim(),
+      'start_at': startDt!.toUtc().toIso8601String(),
+      'end_at': endDt!.toUtc().toIso8601String(),
+    };
+    final pct = double.tryParse(minPctCtrl.text.trim());
+    final days = int.tryParse(minDaysCtrl.text.trim());
+    if (pct != null) body['min_progress_pct'] = pct;
+    if (days != null) body['min_days'] = days;
+
+    try {
+      await ApiService.dio.post(
+          '/circles/${widget.circleId}/contests', data: body);
+      if (mounted) _toast(context, 'Contest started! 🏆');
+      _load();
+    } catch (e) {
+      if (mounted) _toast(context, _errorText(e), error: true);
+    }
+  }
+
+  Future<void> _cancelContest() async {
+    final ok = await _confirm(
+      'Cancel contest?',
+      'The contest will be cancelled and members notified.',
+      'Cancel contest',
+    );
+    if (!ok) return;
+    try {
+      await ApiService.dio
+          .delete('/circles/${widget.circleId}/contests/active');
+      if (mounted) _toast(context, 'Contest cancelled');
+      _load();
+    } catch (e) {
+      if (mounted) _toast(context, _errorText(e), error: true);
+    }
+  }
+
+  String _fmtDt(DateTime dt) {
+    final m = dt.month.toString().padLeft(2, '0');
+    final d = dt.day.toString().padLeft(2, '0');
+    final h = dt.hour.toString().padLeft(2, '0');
+    final min = dt.minute.toString().padLeft(2, '0');
+    return '${dt.year}/$m/$d  $h:$min';
+  }
+
+  String _countdown(String endAtIso) {
+    try {
+      final end = DateTime.parse(endAtIso).toLocal();
+      final diff = end.difference(DateTime.now());
+      if (diff.isNegative) return 'Ended';
+      if (diff.inDays > 0) return '${diff.inDays}d ${diff.inHours % 24}h left';
+      if (diff.inHours > 0) return '${diff.inHours}h ${diff.inMinutes % 60}m left';
+      return '${diff.inMinutes}m left';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Widget _buildContestSection() {
+    final contest = _contest;
+
+    if (contest == null) {
+      if (!_isOwner) return const SizedBox.shrink();
+      // Owner: no contest — show start button
+      return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        const _SectionTitle('Contest'),
+        OutlinedButton.icon(
+          onPressed: _startContest,
+          icon: const Icon(Icons.emoji_events_outlined, size: 18),
+          label: const Text('Start a Contest'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            side: const BorderSide(color: AppColors.primary),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ]);
+    }
+
+    final ranked = (contest['ranked'] as List?) ?? [];
+    final mentions = (contest['honorable_mentions'] as List?) ?? [];
+    final hasWinner = contest['has_winner'] == true;
+    final status = contest['status'] ?? 'active';
+    final isActive = status == 'active';
+    final countdown = isActive ? _countdown(contest['end_at'] ?? '') : 'Ended';
+    final minPct = contest['min_progress_pct'];
+    final minDays = contest['min_days'];
+
+    // Build rule description
+    String ruleDesc = '';
+    if (minPct != null && minDays != null) {
+      ruleDesc = 'Goal: ${minPct.round()}%+ daily for ${minDays}+ days';
+    } else if (minDays != null) {
+      ruleDesc = 'Goal: active for $minDays+ days';
+    } else {
+      ruleDesc = 'Goal: highest total progress';
+    }
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        const Expanded(child: _SectionTitle('Contest')),
+        if (_isOwner && isActive)
+          TextButton(
+            onPressed: _startContest,
+            style: TextButton.styleFrom(padding: EdgeInsets.zero),
+            child: const Text('+ New',
+                style: TextStyle(color: AppColors.textHint, fontSize: 12)),
+          ),
+      ]),
+
+      Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: isActive
+                  ? AppColors.primary.withOpacity(0.5)
+                  : AppColors.border),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            decoration: BoxDecoration(
+              color: isActive
+                  ? AppColors.primary.withOpacity(0.08)
+                  : AppColors.surface,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(15)),
+            ),
+            child: Row(children: [
+              const Text('🏆', style: TextStyle(fontSize: 20)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(contest['title'] ?? '',
+                          style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary)),
+                      const SizedBox(height: 2),
+                      Text(ruleDesc,
+                          style: const TextStyle(
+                              fontSize: 11, color: AppColors.textSecondary)),
+                    ]),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? AppColors.primary.withOpacity(0.15)
+                      : AppColors.border,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  isActive ? countdown : 'Ended',
+                  style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isActive
+                          ? AppColors.primary
+                          : AppColors.textSecondary),
+                ),
+              ),
+            ]),
+          ),
+
+          const Divider(height: 1),
+
+          // Leaderboard or no-winner section
+          if (!hasWinner && mentions.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border:
+                            Border.all(color: Colors.amber.withOpacity(0.4)),
+                      ),
+                      child: const Text(
+                        '🏁 No Official Winner · Contest goal not reached',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.amber),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text('Honorable Mentions',
+                        style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary)),
+                    const SizedBox(height: 6),
+                    for (final m in mentions)
+                      _ContestMedalRow(
+                          entry: m, isHonorable: true, minPct: minPct),
+                  ]),
+            ),
+          ] else if (ranked.isNotEmpty) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 4),
+              child: Column(children: [
+                for (final m in ranked)
+                  _ContestMedalRow(
+                      entry: m, isHonorable: false, minPct: minPct),
+              ]),
+            ),
+          ],
+
+          // Owner controls
+          if (_isOwner && isActive)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 4, 14, 12),
+              child: TextButton(
+                onPressed: _cancelContest,
+                child: const Text('Cancel contest',
+                    style: TextStyle(color: AppColors.error, fontSize: 12)),
+              ),
+            )
+          else
+            const SizedBox(height: 12),
+        ]),
+      ),
+      const SizedBox(height: 24),
+
+      // Show "Start Contest" button for owner after a completed contest
+      if (_isOwner && !isActive)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: OutlinedButton.icon(
+            onPressed: _startContest,
+            icon: const Icon(Icons.emoji_events_outlined, size: 18),
+            label: const Text('Start New Contest'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        ),
+    ]);
   }
 
   Future<void> _removeMember(Map m) async {
@@ -518,6 +917,7 @@ class _CircleDetailScreenState extends State<CircleDetailScreen> {
                 ]),
               ),
               const SizedBox(height: 18),
+              _buildContestSection(),
               const _SectionTitle('Members'),
               for (var i = 0; i < _members.length; i++)
                 _MemberRow(
@@ -840,6 +1240,92 @@ class _MemberRow extends StatelessWidget {
           )
         else
           const SizedBox(width: 12),
+      ]),
+    );
+  }
+}
+
+class _ContestMedalRow extends StatelessWidget {
+  final Map entry;
+  final bool isHonorable;
+  final dynamic minPct; // nullable double
+
+  const _ContestMedalRow(
+      {required this.entry,
+      required this.isHonorable,
+      required this.minPct});
+
+  @override
+  Widget build(BuildContext context) {
+    final rank = entry['rank'] ?? 0;
+    final medal = entry['medal'] ?? '';
+    final name = entry['name'] ?? '';
+    final sumPct = ((entry['sum_pct'] ?? 0) as num).toDouble();
+    final qualDays = (entry['qualifying_days'] ?? 0) as int;
+    final isAchiever = entry['is_achiever'] == true;
+
+    final medals = {1: '🥇', 2: '🥈', 3: '🥉'};
+    final displayMedal = isHonorable ? (medals[rank] ?? '') : medal;
+
+    Color? bgColor;
+    if (!isHonorable) {
+      if (rank == 1 && isAchiever) bgColor = const Color(0xFFFFF8E1); // gold tint
+      if (rank == 2 && isAchiever) bgColor = const Color(0xFFF5F5F5); // silver tint
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: bgColor ?? Colors.transparent,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isHonorable
+              ? Colors.amber.withOpacity(0.3)
+              : (isAchiever
+                  ? AppColors.primary.withOpacity(0.2)
+                  : AppColors.border.withOpacity(0.5)),
+        ),
+      ),
+      child: Row(children: [
+        SizedBox(
+          width: 30,
+          child: Text(
+            displayMedal.isNotEmpty ? displayMedal : '$rank',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: displayMedal.isNotEmpty ? 18 : 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textHint),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight:
+                        isAchiever ? FontWeight.w700 : FontWeight.w500,
+                    color: AppColors.textPrimary)),
+            if (minPct != null && qualDays > 0)
+              Text('$qualDays qualifying day${qualDays == 1 ? '' : 's'}',
+                  style: const TextStyle(
+                      fontSize: 11, color: AppColors.textSecondary)),
+          ]),
+        ),
+        const SizedBox(width: 8),
+        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text('${sumPct.toStringAsFixed(0)}%',
+              style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: isAchiever ? AppColors.primary : AppColors.textSecondary)),
+          if (isHonorable)
+            const Text('honorable mention',
+                style: TextStyle(fontSize: 9, color: Colors.amber)),
+        ]),
       ]),
     );
   }

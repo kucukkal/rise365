@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.config import settings
 from app.routers import auth, users, tasks, prayers, admin, pdfs, user_tasks, events, quotes, content_tasks, circles
+from app.routers import circle_contests
 from app.routers import settings as app_settings_router
 import os
 
@@ -34,6 +35,7 @@ app.include_router(app_settings_router.router, prefix="/api/v1/settings", tags=[
 app.include_router(quotes.router, prefix="/api/v1/quotes", tags=["Quotes"])
 app.include_router(content_tasks.router, prefix="/api/v1/content-tasks", tags=["Content Tasks"])
 app.include_router(circles.router, prefix="/api/v1/circles", tags=["Circles"])
+app.include_router(circle_contests.router, prefix="/api/v1/circles", tags=["Contests"])
 
 static_path = os.path.join(os.path.dirname(__file__), "..", "static")
 if os.path.exists(static_path):
