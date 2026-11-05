@@ -182,6 +182,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           data: useZip ? {'zip_code': z} : {'city': c, 'state': s});
       if (!mounted) return;
       setState(() => _locationLabel = res.data['location_label']);
+      progressRefresh.value++;
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Location updated')));
     } catch (e) {

@@ -108,6 +108,8 @@ void _handleNotificationTap(Map<String, dynamic> data) {
   int tabIndex = 0;
   if (tab == 'prayer' || type.contains('prayer')) {
     tabIndex = 1;
+  } else if (tab == 'circles' || type.startsWith('circle')) {
+    tabIndex = 3; // Circles tab
   }
 
   navigateToTab(tabIndex, frequency: frequency);
