@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/services/api_service.dart';
 import '../../../core/services/users_api.dart';
 import '../../../shared/models/user_model.dart';
+import '../../../core/services/subscription_service.dart';
 import '../../auth/screens/login_screen.dart';
+import '../../subscription/screens/paywall_screen.dart';
 import 'home_shell.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -71,10 +73,20 @@ class _SplashScreenState extends State<SplashScreen>
             totalPoints: data['total_points'] ?? 0,
             completionRate: (data['completion_rate'] ?? 0.0).toDouble(),
           );
+
+          // Link RevenueCat to this user so sub follows across devices
+          await SubscriptionService.identifyUser(user.id);
+
+          // Check subscription — gate non-subscribers to the paywall
+          final isSubscribed = await SubscriptionService.isActive();
+          if (!mounted) return;
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (_) => HomeShell(user: user),
+              builder: (_) => isSubscribed
+                  ? HomeShell(user: user)
+                  : PaywallScreen(user: user),
             ),
           );
         } catch (e) {

@@ -3,7 +3,9 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/services/progress_refresh.dart';
 import '../../../core/services/notification_navigation.dart';
 import '../../../core/services/prayer_time_service.dart';
+import '../../../core/services/subscription_service.dart';
 import '../../../shared/models/user_model.dart';
+import '../../subscription/screens/paywall_screen.dart';
 import '../../tasks/screens/tasks_screen.dart';
 import '../../prayer/screens/prayer_screen.dart';
 import '../../events/screens/events_screen.dart';
@@ -32,6 +34,20 @@ class _HomeShellState extends State<HomeShell> {
     super.initState();
     _taskFrequency = widget.initialFrequency;
     notificationTabNotifier.addListener(_onNotificationNav);
+    _checkSubscription();
+  }
+
+  Future<void> _checkSubscription() async {
+    await SubscriptionService.identifyUser(widget.user.id);
+    final isSubscribed = await SubscriptionService.isActive();
+    if (!isSubscribed && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PaywallScreen(user: widget.user),
+        ),
+      );
+    }
   }
 
   void _onNotificationNav() {

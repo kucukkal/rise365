@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'core/services/api_service.dart';
+import 'core/services/subscription_service.dart';
 import 'core/services/users_api.dart';
 import 'core/services/notification_navigation.dart';
 import 'features/home/screens/splash_screen.dart';
@@ -29,6 +30,8 @@ void main() async {
   } catch (e) {
     devLog('❌ Firebase init error: $e');
   }
+
+  await SubscriptionService.init();
 
   runApp(const ProviderScope(child: Rise365App()));
 }

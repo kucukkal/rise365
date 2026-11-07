@@ -20,44 +20,44 @@ class OtpScreen extends StatefulWidget {
 }
 
 class _OtpScreenState extends State<OtpScreen> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _focusNodes =
-      List.generate(6, (_) => FocusNode());
+  // Single controller behind 6 visual boxes — fixes backspace + SMS auto-fill
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      setState(() {}); // redraw boxes on each keystroke
+      if (_controller.text.length == 6) _verify();
+    });
+    // Auto-focus the hidden field on open
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNode.requestFocus();
+    });
+  }
+
+  @override
   void dispose() {
-    for (var c in _controllers) c.dispose();
-    for (var f in _focusNodes) f.dispose();
+    _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  void _onDigitEntered(int index, String value) {
-    if (value.isNotEmpty && index < 5) {
-      _focusNodes[index + 1].requestFocus();
-    }
-    if (index == 5 && value.isNotEmpty) {
-      _verify();
-    }
-  }
+  Future<void> _verify() async {
+    final otp = _controller.text;
+    if (otp.length < 6) return;
+    if (_isLoading) return;
 
-  void _verify() async {
-  final otp = _controllers.map((c) => c.text).join();
-  if (otp.length < 6) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please enter all 6 digits')),
-    );
-    return;
-  }
-  setState(() => _isLoading = true);
-  try {
-    final verifyResult = await AuthApi.verifyOtp(
-      phone: widget.phone,
-      code: otp,
-    );
-    if (mounted) {
-      Navigator.push(
+    setState(() => _isLoading = true);
+    try {
+      final verifyResult = await AuthApi.verifyOtp(
+        phone: widget.phone,
+        code: otp,
+      );
+      if (!mounted) return;
+      Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => RegisterScreen(
@@ -69,22 +69,24 @@ class _OtpScreenState extends State<OtpScreen> {
           ),
         ),
       );
-    }
-  } catch (e) {
-    if (mounted) {
+    } catch (e) {
+      if (!mounted) return;
+      _controller.clear();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Invalid OTP. Try again.'),
+        const SnackBar(
+          content: Text('Invalid code. Please try again.'),
           backgroundColor: AppColors.error,
         ),
       );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
-  setState(() => _isLoading = false);
-}
 
   @override
   Widget build(BuildContext context) {
+    final code = _controller.text;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -96,95 +98,134 @@ class _OtpScreenState extends State<OtpScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              const Text(
-                'Verify your number',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'We sent a 6-digit code to\n${widget.phone}',
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: AppColors.textSecondary,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 40),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(6, (i) {
-                  return SizedBox(
-                    width: 48,
-                    height: 56,
-                    child: TextFormField(
-                      controller: _controllers[i],
-                      focusNode: _focusNodes[i],
-                      textAlign: TextAlign.center,
-                      keyboardType: TextInputType.number,
-                      maxLength: 1,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ],
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                      decoration: InputDecoration(
-                        counterText: '',
-                        filled: true,
-                        fillColor: AppColors.surface,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                              const BorderSide(color: AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                              color: AppColors.primary, width: 2),
-                        ),
-                      ),
-                      onChanged: (v) => _onDigitEntered(i, v),
-                    ),
-                  );
-                }),
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _isLoading ? null : _verify,
-                child: _isLoading
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                    : const Text('Verify Code'),
-              ),
-              const SizedBox(height: 20),
-              Center(
-                child: TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'Resend code',
-                    style: TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w500),
+      body: GestureDetector(
+        // Tap anywhere to refocus hidden field
+        onTap: () => _focusNode.requestFocus(),
+        behavior: HitTestBehavior.opaque,
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20),
+                const Text(
+                  'Verify your number',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                Text(
+                  'We sent a 6-digit code to\n${widget.phone}',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // ── 6 visual boxes ────────────────────────────────────────
+                Stack(
+                  children: [
+                    // Hidden real input (receives keyboard / SMS auto-fill)
+                    Opacity(
+                      opacity: 0,
+                      child: TextField(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        autofillHints: const [AutofillHints.oneTimeCode],
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly
+                        ],
+                        onSubmitted: (_) => _verify(),
+                      ),
+                    ),
+                    // Visual boxes row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: List.generate(6, (i) {
+                        final filled = i < code.length;
+                        final isActive =
+                            i == code.length && _focusNode.hasFocus;
+                        return GestureDetector(
+                          onTap: () => _focusNode.requestFocus(),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 48,
+                            height: 56,
+                            decoration: BoxDecoration(
+                              color: AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isActive
+                                    ? AppColors.primary
+                                    : filled
+                                        ? AppColors.primary.withOpacity(0.5)
+                                        : AppColors.border,
+                                width: isActive ? 2 : 1,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: filled
+                                ? Text(
+                                    code[i],
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  )
+                                : isActive
+                                    ? Container(
+                                        width: 2,
+                                        height: 24,
+                                        color: AppColors.primary,
+                                      )
+                                    : null,
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 52,
+                  child: ElevatedButton(
+                    onPressed: (_isLoading || code.length < 6)
+                        ? null
+                        : _verify,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                                color: Colors.white, strokeWidth: 2))
+                        : const Text('Verify Code'),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: TextButton(
+                    onPressed: () {},
+                    child: const Text(
+                      'Resend code',
+                      style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
