@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/services/subscription_service.dart';
 import '../../../core/utils/log.dart';
 import '../../../shared/models/user_model.dart';
@@ -260,9 +261,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       style: const TextStyle(
                           decoration: TextDecoration.underline),
                       recognizer: TapGestureRecognizer()
-                        ..onTap = () {
-                          // TODO: open your terms URL
-                        },
+                        ..onTap = () => launchUrl(
+                              Uri.parse('https://www.apple.com/legal/internet-services/itunes/dev/stdeula/'),
+                              mode: LaunchMode.externalApplication,
+                            ),
                     ),
                     const TextSpan(text: '  ·  '),
                     TextSpan(
@@ -270,9 +272,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       style: const TextStyle(
                           decoration: TextDecoration.underline),
                       recognizer: TapGestureRecognizer()
-                        ..onTap = () {
-                          // TODO: open your privacy URL
-                        },
+                        ..onTap = () => launchUrl(
+                              Uri.parse('https://rise365.app/privacy'),
+                              mode: LaunchMode.externalApplication,
+                            ),
                     ),
                   ],
                 ),

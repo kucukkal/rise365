@@ -1,7 +1,7 @@
 name: rise365
 description: Rise365 - Faith-based task and prayer tracking app
 publish_to: 'none'
-version: 1.1.0+2
+version: 1.0.0+5
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -38,6 +38,7 @@ dependencies:
 
   # Utils
   intl: ^0.19.0
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:
